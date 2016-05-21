@@ -1,0 +1,29 @@
+// NFSM3.idl : type library source for NFSM3.exe
+
+// This file will be processed by the MIDL compiler to produce the
+// type library (NFSM3.tlb).
+
+[ uuid(1FE6C009-2C82-477F-BDB9-19065F7E9C9B), version(1.0) ]
+library NFSM3
+{
+	importlib("stdole32.tlb");
+	importlib("stdole2.tlb");
+
+	//  Primary dispatch interface for CNFSM3Doc
+	
+	[ uuid(E55AB773-13A7-4E4A-AB24-38964C55F6DB) ]
+	dispinterface INFSM3
+	{
+		properties:
+			
+		methods:
+	};
+
+	//  Class information for CNFSM3Doc
+	
+	[ uuid(2EB3DE97-9377-4663-93A1-68D235066A39) ]
+	coclass NFSM3
+	{
+		[default] dispinterface INFSM3;
+	};
+};
