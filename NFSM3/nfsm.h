@@ -209,6 +209,5 @@ bool is_bracket(char ch);
 bool is_meta_char_nb(char ch); //without ()
 bool is_star_plus_quest(char ch);
 std::wstring read_output_wnd(CWnd * wnd);
-void array_deleter(State* st);
 //int transition_for_symbol(NFSM * nfsm, char input, bool last_ch);
 

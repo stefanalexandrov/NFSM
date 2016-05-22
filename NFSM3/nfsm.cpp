@@ -42,7 +42,6 @@ State::State(int id, bool initial, bool finals) {
 	m_final_state = finals;
 	m_empty = false;
 }
-//State::~State() {};
 void State::set_transition(int id, char symbol, State * in) {
 	m_out.push_back(Transition(id, symbol, this, in));
 	in->m_in.push_back(Transition(id, symbol, this, in));
@@ -66,7 +65,7 @@ RUN::RUN(NFSM* machine) {
 	m_nfsms.reserve(MAX_NUMBER_OF_NFSM_COPIES);
 	m_output = machine->m_output;
 }
-NFSM::NFSM() : m_states{ new State[MAX_NUMBER_OF_STATES], array_deleter } {
+NFSM::NFSM() : m_states{ new State[MAX_NUMBER_OF_STATES], std::default_delete<State[]>() } {
 	m_constructed = false;
 	m_regexpr = "";
 	m_t_id = 0;
@@ -76,6 +75,7 @@ NFSM::NFSM() : m_states{ new State[MAX_NUMBER_OF_STATES], array_deleter } {
 	for (int i = 0; i < MAX_NUMBER_OF_STATES; i++)
 		states[i] = State(); //ititialize array with empty states	
 }
+//!!!!!! Many NFSM objects can share the same State array after they are constructed!!!!!! - performance reasons
 NFSM::NFSM(const NFSM& nfsm) :m_1_structure{ nfsm.m_1_structure }, m_2_structure{ nfsm.m_2_structure},
     m_3_structure{ nfsm.m_3_structure }, m_4_structure{ nfsm.m_4_structure }, m_or_structure{ nfsm.m_or_structure },
     m_states{ nfsm.m_states }, m_current{ nullptr }, m_constructed{ nfsm.m_constructed },
@@ -1598,7 +1598,4 @@ void NFSM::clean() {
 	m_regexpr = "";
 	m_s_id = 0;
 	m_t_id = 0;
-}
-void array_deleter(State* st) {
-	delete[] st;
 }
