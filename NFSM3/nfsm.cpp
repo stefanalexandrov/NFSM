@@ -7,9 +7,11 @@
 
 const int MAX_NUMBER_OF_STATES = 10000;
 const int MAX_NUMBER_OF_NFSM_COPIES = 1000;
-const char LAMBDA_CH = '§';
+const char LAMBDA_CH = '§'; //character to represent a lambda-transition
+const char BETA_CH = '#'; //character to represent a beta-transition
+//(like lambda-transition, but consumes one symbol) for "." metachar
 
-std::vector<char> METACHAR_ = { '(',')','*','.','+','?', '|'};
+std::vector<char> METACHAR_ = { '(',')','*','+','?', '|'}; // '.' is not treated as metachar for simplisity
 
 Transition::Transition() {}
 Transition::Transition(int id, char symbol, State * from, State * in) {
@@ -76,10 +78,17 @@ NFSM::NFSM() : m_states{ new State[MAX_NUMBER_OF_STATES], std::default_delete<St
 		states[i] = State(); //ititialize array with empty states	
 }
 //!!!!!! Many NFSM objects can share the same State array after they are constructed!!!!!! - performance reasons
-NFSM::NFSM(const NFSM& nfsm) :m_1_structure{ nfsm.m_1_structure }, m_2_structure{ nfsm.m_2_structure},
-    m_3_structure{ nfsm.m_3_structure }, m_4_structure{ nfsm.m_4_structure }, m_or_structure{ nfsm.m_or_structure },
-    m_states{ nfsm.m_states }, m_current{ nullptr }, m_constructed{ nfsm.m_constructed },
-	m_valid{ nfsm.m_valid }, m_regexpr{ nfsm.m_regexpr }, m_output{ nfsm.m_output },
+NFSM::NFSM(const NFSM& nfsm) :m_1_structure{ nfsm.m_1_structure },
+    m_2_structure{ nfsm.m_2_structure},
+    m_3_structure{ nfsm.m_3_structure },
+	m_4_structure{ nfsm.m_4_structure },
+	m_or_structure{ nfsm.m_or_structure },
+    m_states{ nfsm.m_states },
+	m_current{ nullptr },
+	m_constructed{ nfsm.m_constructed },
+	m_valid{ nfsm.m_valid },
+	m_regexpr{ nfsm.m_regexpr },
+	m_output{ nfsm.m_output },
 	m_s_id{ nfsm.m_s_id }, m_t_id{nfsm.m_t_id}
 {
 	State* states = m_states.get();
@@ -335,7 +344,7 @@ int NFSM::construct() {
 			sub_nfsm_2 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
 			i++;
 		}
-		else if (!end_of_s && !is_meta_char(*i)) {
+		else if (/*!end_of_s &&*/i != m_regexpr.end() && !is_meta_char(*i)) {
 			tmp += *i;
 			sub_nfsm_2 = copy_nfsm(m_1_structure.at(*i).m_init, m_1_structure.at(*i).m_final);
 		}
@@ -979,19 +988,8 @@ TransType RUN::make_transition()// for empty string
 }
 TransType RUN::make_transition(char input, bool last_ch)
 {
-	//output configuration
-	int output_size = m_output->GetWindowTextLength();
-	std::wstring output_ws;
-	std::string output_s;
-	
-	TCHAR number[90];
-	LPTSTR output = new TCHAR[output_size + 1];
-	if (output_size > 0) {
-		m_output->GetWindowTextW(output, output_size + 1);
-		output_ws = output;
-		output_s = std::string(output_ws.begin(), output_ws.end());
-	}
-	delete output;
+	std::wstring output_ws = read_output_wnd(m_output);
+	const int N_SIZE = 90;
 	
 	if (run_lambda(this, NULL, false, NULL, NULL) == TransType::FINAL_STATE_LAMBDA && last_ch)
 		return TransType::FINAL_STATE_LAMBDA;
@@ -1002,6 +1000,7 @@ TransType RUN::make_transition(char input, bool last_ch)
 	for (std::vector<NFSM>::iterator j = m_nfsms.begin(); j != m_nfsms.end(); j++) {
 		t_type = transition_for_symbol(NULL, &(*j), input, last_ch, &n_invalidated);
 	}
+	TCHAR number[N_SIZE];
 	swprintf_s(number, 90, _T("runtime number of NFSM copies: %d \r\n"), m_nfsms.size());
 	output_ws.append(number);
 	//actually delete nfsms 
@@ -1221,7 +1220,11 @@ StateCouple NFSM::make_one_symbol_NFSM(char ch) {
 	m_s_id++;
 	p_a->set_initial(true);
 	p_b->set_final(true);
-	p_a->set_transition(m_t_id++, ch, p_b);
+	// handle "." metachar
+	if (ch == '.')
+		p_a->set_transition(m_t_id++, BETA_CH, p_b);
+	else
+		p_a->set_transition(m_t_id++, ch, p_b);
 	return StateCouple(p_a, p_b);
 }
 StateCouple NFSM::connect_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2) {
@@ -1501,7 +1504,9 @@ void NFSM::write_nfsm(std::string file_name) {
 				else
 					graph_tmp += std::to_string(i->m_in->m_id);
 				graph_tmp += " [label=";
+				graph_tmp += '"';
 				graph_tmp += i->m_symbol;
+				graph_tmp += '"';
 				graph_tmp += "]";
 				if (graph.find(graph_tmp) == std::string::npos) {
 					graph += graph_tmp + "\n";
@@ -1532,12 +1537,13 @@ bool is_star_plus_quest(char ch) {
 TransType RUN::transition_for_symbol(std::vector<NFSM> * p_nfsms, NFSM * nfsm, char input, bool last_ch, int * n_inval, bool formal) {
 	int n_of_transitions = 0;
 	std::vector<NFSM> NFSMs_tmp;
-	TransType t_type;
+	TransType t_type = TransType::INVALID_TRANSITION;
 	std::vector<Transition>::iterator T_begin = nfsm->m_current->m_out.begin();
 	std::vector<Transition>::iterator T_end = nfsm->m_current->m_out.end();
 	for (std::vector<Transition>::iterator i = T_begin; i != T_end; ++i) {
 
-		if (nfsm->is_valid() && (i->m_symbol == input /*|| (formal && i->m_symbol != LAMBDA_CH)*/)  && n_of_transitions > 0) {
+		if (nfsm->is_valid() && (i->m_symbol == input || i->m_symbol == BETA_CH
+			/*|| (formal && i->m_symbol != LAMBDA_CH)*/)  && n_of_transitions > 0) {
 			NFSM tmp = *nfsm;
 			tmp.m_current = i->m_in;
 			NFSMs_tmp.push_back(tmp);
@@ -1550,7 +1556,8 @@ TransType RUN::transition_for_symbol(std::vector<NFSM> * p_nfsms, NFSM * nfsm, c
 			}
 			t_type = TransType::NOT_FINAL;
 		}
-		else if (nfsm->is_valid() && (i->m_symbol == input /*|| (formal && i->m_symbol != LAMBDA_CH)*/) && n_of_transitions == 0) {
+		else if (nfsm->is_valid() && (i->m_symbol == input || i->m_symbol == BETA_CH
+			/*|| (formal && i->m_symbol != LAMBDA_CH)*/) && n_of_transitions == 0) {
 			nfsm->m_current = i->m_in;
 			n_of_transitions++;
 			if (i->m_in->m_final_state && last_ch)

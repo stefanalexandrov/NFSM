@@ -69,8 +69,6 @@ CNFSM3Dlg::~CNFSM3Dlg()
 	//  the dialog has been deleted.
 	if (m_pAutoProxy != NULL)
 		m_pAutoProxy->m_pDialog = NULL;
-	//delete m_nfsm;
-	//m_nfsm.reset();
 }
 
 void CNFSM3Dlg::DoDataExchange(CDataExchange* pDX)
@@ -97,7 +95,6 @@ END_MESSAGE_MAP()
 BOOL CNFSM3Dlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
-
 
 	// Add "About..." menu item to system menu.
 
@@ -290,25 +287,10 @@ void CNFSM3Dlg::OnCheck()
 int check_reg_expr(std::string s) {
 
 	std::size_t bs = 0;
-	char bad_symbols[] = { '#','%','§','$','#','/','\"','\'', '&', '{', '}', '[', ']', '.' };
+	char bad_symbols[] = { '#','%','§','$','#','/','\"','\'', '&', '{', '}', '[', ']' };
 	for (int i = 0; i < sizeof(bad_symbols); i++)
 		if (s.find(bad_symbols[i]) != std::string::npos)
 			return -1;
-
-	//std::regex e("a*");
-	//if (std::regex_match(s.begin(), s.end(), e))
-		//return -1;
-
-	// create regular expression content
-	
-
-	//boost::regex pat("(.*)(a*)(.*)");
-
-	//boost::smatch matches;
-		//if (!boost::regex_match(ss, matches, pat)) {
-			//std::cout << matches[2] << std::endl;
-			//return -1;
-	//}
 
 	std::vector<std::regex>  bad;
 	bad.push_back(std::regex("(.*)([\*,\+,\?][*,+,?]+)(.*)"));
@@ -359,7 +341,6 @@ void CNFSM3Dlg::OnChangeRegExpr() {
 	CWnd * wnd_formal_result = GetDlgItem(IDC_STATIC2);
 	wnd_formal_result->SetWindowTextW(_T("not known"));
 	if (m_nfsm.is_constructed()) {
-		//m_nfsm.reset(new NFSM());
 		m_nfsm.clean();
 	}
 	return;
