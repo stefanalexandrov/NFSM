@@ -66,7 +66,7 @@ public:
 	bool correct;
 	std::wstring output_normal_ws;
 	std::wstring output_error_ws;
-	std::shared_ptr<NFSM> m_nfsm;
+	NFSM m_nfsm;
 	afx_msg void OnStnClickedStatic4();
 };
 

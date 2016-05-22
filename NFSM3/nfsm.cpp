@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #include "nfsm.h"
-#include <array>
-
 #include "NFSM3.h"
 #include "NFSM3Dlg.h"
 #include "DlgProxy.h"
@@ -9,6 +7,7 @@
 
 const int MAX_NUMBER_OF_STATES = 10000;
 const int MAX_NUMBER_OF_NFSM_COPIES = 1000;
+const char LAMBDA_CH = '§';
 
 std::vector<char> METACHAR_ = { '(',')','*','.','+','?', '|'};
 
@@ -43,7 +42,7 @@ State::State(int id, bool initial, bool finals) {
 	m_final_state = finals;
 	m_empty = false;
 }
-State::~State() {};
+//State::~State() {};
 void State::set_transition(int id, char symbol, State * in) {
 	m_out.push_back(Transition(id, symbol, this, in));
 	in->m_in.push_back(Transition(id, symbol, this, in));
@@ -61,19 +60,17 @@ bool State::is_final() {
 bool State::is_initial() {
 	return m_init_state;
 }
-RUN::RUN(std::shared_ptr<NFSM> machine) {
+RUN::RUN(NFSM* machine) {
 	m_nfsm = machine;
 	m_nfsms.push_back(*machine);
 	m_nfsms.reserve(MAX_NUMBER_OF_NFSM_COPIES);
 	m_output = machine->m_output;
 }
-NFSM::NFSM() {
+NFSM::NFSM() : m_states{ new State[MAX_NUMBER_OF_STATES], array_deleter } {
 	m_constructed = false;
 	m_regexpr = "";
 	m_t_id = 0;
 	m_s_id = 0;
-	std::shared_ptr<State> tmp{ new State[MAX_NUMBER_OF_STATES] };
-	m_states = tmp;
 	State* states = m_states.get();
 	m_valid = true;
 	for (int i = 0; i < MAX_NUMBER_OF_STATES; i++)
@@ -87,7 +84,8 @@ NFSM::NFSM(const NFSM& nfsm) :m_1_structure{ nfsm.m_1_structure }, m_2_structure
 {
 	State* states = m_states.get();
 	State* copy_states = nfsm.m_states.get();
-	if (!nfsm.m_constructed) { //if nfsm is constructed it does not modify the vector pointed to by m_states
+	if (!nfsm.m_constructed) { 
+		//if nfsm is constructed it does not modify the array pointed to by m_states
 		// otherwise if m_constructed is false we need to copy the States
 		m_states = std::shared_ptr<State>{ new State[MAX_NUMBER_OF_STATES] };
 		int id = nfsm.m_current->m_id;
@@ -115,7 +113,7 @@ NFSM& NFSM::operator=(const NFSM& nfsm) {
 	m_output = nfsm.m_output;
 	m_s_id = nfsm.m_s_id;
 	m_t_id = nfsm.m_t_id;
-	if (!nfsm.m_constructed) { //if nfsm is constructed it does not modify the vector pointed to by m_states
+	if (!nfsm.m_constructed) { //if nfsm is constructed it does not modify the array pointed to by m_states
 							   // otherwise if m_constructed is false we need to copy the States
 		m_states = std::shared_ptr<State>{ new State[MAX_NUMBER_OF_STATES] };
 		int id = nfsm.m_current->m_id;
@@ -166,7 +164,9 @@ NFSM::NFSM(std::string regexpr, CWnd * output): NFSM() {
 }
 
 NFSM::~NFSM() {
-	//delete[] m_states;
+	//delete[] m_states; //shared_ptr is used since many MNFSs created during the bound computation method
+	//and string matching share the m_states array of State objects. This is done for performance reasons
+	//
 }
 
 int NFSM::construct() {
@@ -817,10 +817,10 @@ StateCouple NFSM::make_or_NFSM(State * s_init_1, State * s_final_1, State * s_in
 	right.m_init->set_initial(false);
 	right.m_final->set_final(false);
 
-	p_a->set_transition(m_t_id++, '§', left.m_init);
-	p_a->set_transition(m_t_id++, '§', right.m_init);
-	left.m_final->set_transition(m_t_id++, '§', p_b);
-	right.m_final->set_transition(m_t_id++, '§', p_b);
+	p_a->set_transition(m_t_id++, LAMBDA_CH, left.m_init);
+	p_a->set_transition(m_t_id++, LAMBDA_CH, right.m_init);
+	left.m_final->set_transition(m_t_id++, LAMBDA_CH, p_b);
+	right.m_final->set_transition(m_t_id++, LAMBDA_CH, p_b);
 
 	return StateCouple(p_a, p_b);
 }
@@ -937,7 +937,7 @@ int RUN::formal(int length) { //compute bounds on number of NFSM copies
 				set_of_symbols.clear(); // each time a new set of symbols
 				for (std::vector<NFSM>::iterator it = tmp.begin(); it != tmp.end(); it++) {
 					for (std::vector<Transition>::iterator tr = it->m_current->m_out.begin(); tr != it->m_current->m_out.end(); tr++) {
-						if (tr->m_symbol != '§')
+						if (tr->m_symbol != LAMBDA_CH)
 							set_of_symbols.insert(tr->m_symbol);
 					}
 				}
@@ -965,7 +965,8 @@ int RUN::formal(int length) { //compute bounds on number of NFSM copies
 		tmp_vv_NFSM.clear();
 
 	}
-
+	if (!max_n)
+		max_n = 1;
 	return max_n;
 }
 
@@ -1052,7 +1053,7 @@ TransType run_lambda(RUN * obj, std::vector<NFSM> * p_nfsms, bool last_ch, std::
 				cur = visited.find(i->m_in->m_id);
 				if (visited_s)
 					no_rep = visited_s->find(i->m_in->m_id); // for loops prevention
-				if (i->m_symbol == '§' && cur == visited.end() && (visited_s == NULL || no_rep == visited_s->end())) {
+				if (i->m_symbol == LAMBDA_CH && cur == visited.end() && (visited_s == NULL || no_rep == visited_s->end())) {
 					lambda = true;
 					if (n_of_transitions > 0) { // nondeterministic transition
 						NFSM tmp = *j;
@@ -1078,7 +1079,8 @@ TransType run_lambda(RUN * obj, std::vector<NFSM> * p_nfsms, bool last_ch, std::
 						t_type = TransType::NOT_FINAL_LAMBDA;
 					}
 				}
-				else if (n_invalidated != NULL && visited_s != NULL && (i->m_in->m_final_state || no_rep != visited_s->end())) {
+				else if (n_invalidated != NULL && visited_s != NULL && 
+					((i->m_in->m_final_state && i->m_symbol == LAMBDA_CH) || no_rep != visited_s->end())) {
 					(*n_invalidated) += 1;
 					j->set_invalid();
 				}
@@ -1151,10 +1153,10 @@ StateCouple NFSM::make_star_NFSM(State * s_init, State * s_final) {
 	copy.m_init->set_initial(false);
 	copy.m_final->set_final(false);
 
-	p_a->set_transition(m_t_id++, '§', copy.m_init);
-	p_a->set_transition(m_t_id++, '§', p_b);
-	copy.m_final->set_transition(m_t_id++, '§', p_b);
-	copy.m_final->set_transition(m_t_id++, '§', copy.m_init);
+	p_a->set_transition(m_t_id++, LAMBDA_CH, copy.m_init);
+	p_a->set_transition(m_t_id++, LAMBDA_CH, p_b);
+	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, p_b);
+	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, copy.m_init);
 
 	return StateCouple(p_a, p_b);
 }
@@ -1176,10 +1178,9 @@ StateCouple NFSM::make_plus_NFSM(State * s_init, State * s_final) {
 	copy.m_init->set_initial(false);
 	copy.m_final->set_final(false);
 
-	p_a->set_transition(m_t_id++, '§', copy.m_init);
-	//p_a->set_transition(m_t_id++, '§', p_b); // one or more matches
-	copy.m_final->set_transition(m_t_id++, '§', p_b);
-	copy.m_final->set_transition(m_t_id++, '§', copy.m_init);
+	p_a->set_transition(m_t_id++, LAMBDA_CH, copy.m_init);
+	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, p_b);
+	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, copy.m_init);
 	return StateCouple(p_a, p_b);
 }
 StateCouple NFSM::make_simple_NFSM(State * s_init, State * s_final) {
@@ -1205,10 +1206,9 @@ StateCouple NFSM::make_question_NFSM(State * s_init, State * s_final) {
 	copy.m_init->set_initial(false);
 	copy.m_final->set_final(false);
 
-	p_a->set_transition(m_t_id++, '§', copy.m_init);
-	p_a->set_transition(m_t_id++, '§', p_b); 
-	copy.m_final->set_transition(m_t_id++, '§', p_b);
-	//copy.m_final->set_transition(m_t_id++, '§', copy.m_init); // zero or one matches
+	p_a->set_transition(m_t_id++, LAMBDA_CH, copy.m_init);
+	p_a->set_transition(m_t_id++, LAMBDA_CH, p_b);
+	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, p_b);
 	return StateCouple(p_a, p_b);
 }
 StateCouple NFSM::make_one_symbol_NFSM(char ch) {
@@ -1226,7 +1226,7 @@ StateCouple NFSM::make_one_symbol_NFSM(char ch) {
 }
 StateCouple NFSM::connect_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2) {
 	s_final_1->set_final(false);
-	s_final_1->set_transition(m_t_id++, '§', s_init_2);
+	s_final_1->set_transition(m_t_id++, LAMBDA_CH, s_init_2);
 	s_init_2->set_initial(false);
 	s_final_2->set_final(true);
 	return StateCouple(s_init_1, s_final_2);
@@ -1381,9 +1381,9 @@ void NFSM::optimize() {
 				continue;
 
 
-			if (st->m_in.size() == 1 && (st->m_in.at(0).m_symbol == '§')) { // just one input to the state
+			if (st->m_in.size() == 1 && (st->m_in.at(0).m_symbol == LAMBDA_CH)) { // just one input to the state
 				for (std::vector<Transition>::iterator it = st->m_out.begin(); it != st->m_out.end(); it++)
-					if (it->m_symbol != '§') // outputs only lambda
+					if (it->m_symbol != LAMBDA_CH) // outputs only lambda
 						only_lambda = false;
 			}
 			else
@@ -1420,9 +1420,9 @@ void NFSM::optimize() {
 				continue;
 
 
-			if (st->m_out.size() == 1 && (st->m_out.at(0).m_symbol == '§')) { // just one input to the state
+			if (st->m_out.size() == 1 && (st->m_out.at(0).m_symbol == LAMBDA_CH)) { // just one input to the state
 				for (std::vector<Transition>::iterator it = st->m_in.begin(); it != st->m_in.end(); it++)
-					if (it->m_symbol != '§') // outputs only lambda
+					if (it->m_symbol != LAMBDA_CH) // outputs only lambda
 						only_lambda = false;
 			}
 			else
@@ -1482,7 +1482,6 @@ void NFSM::write_nfsm(std::string file_name) {
 	std::string graph_tmp;
 	out_file.open(file_name);
 
-
 	// header
 	out_file << "strict digraph {" << std::endl;
 	out_file << "	rankdir = LR" << std::endl;
@@ -1515,11 +1514,8 @@ void NFSM::write_nfsm(std::string file_name) {
 		current_s_new.clear();
 	}
 	out_file << graph << std::endl;
-
 	out_file <<  std::endl;
 	out_file << "}"<<std::endl;
-
-
 	// close the opened file.
 	out_file.close();
 }
@@ -1541,7 +1537,7 @@ TransType RUN::transition_for_symbol(std::vector<NFSM> * p_nfsms, NFSM * nfsm, c
 	std::vector<Transition>::iterator T_end = nfsm->m_current->m_out.end();
 	for (std::vector<Transition>::iterator i = T_begin; i != T_end; ++i) {
 
-		if (nfsm->is_valid() && (i->m_symbol == input /*|| (formal && i->m_symbol != '§')*/)  && n_of_transitions > 0) {
+		if (nfsm->is_valid() && (i->m_symbol == input /*|| (formal && i->m_symbol != LAMBDA_CH)*/)  && n_of_transitions > 0) {
 			NFSM tmp = *nfsm;
 			tmp.m_current = i->m_in;
 			NFSMs_tmp.push_back(tmp);
@@ -1554,7 +1550,7 @@ TransType RUN::transition_for_symbol(std::vector<NFSM> * p_nfsms, NFSM * nfsm, c
 			}
 			t_type = TransType::NOT_FINAL;
 		}
-		else if (nfsm->is_valid() && (i->m_symbol == input /*|| (formal && i->m_symbol != '§')*/) && n_of_transitions == 0) {
+		else if (nfsm->is_valid() && (i->m_symbol == input /*|| (formal && i->m_symbol != LAMBDA_CH)*/) && n_of_transitions == 0) {
 			nfsm->m_current = i->m_in;
 			n_of_transitions++;
 			if (i->m_in->m_final_state && last_ch)
@@ -1589,4 +1585,20 @@ std::wstring read_output_wnd(CWnd * wnd) {
 	}
 	delete[] output;
 	return output_ws;
+}
+void NFSM::clean() {
+	//m_states.reset();
+	m_1_structure.clear();
+	m_2_structure.clear();
+	m_3_structure.clear();
+	m_4_structure.clear();
+	m_or_structure.clear();
+	m_current = nullptr;
+	m_constructed = false;
+	m_regexpr = "";
+	m_s_id = 0;
+	m_t_id = 0;
+}
+void array_deleter(State* st) {
+	delete[] st;
 }

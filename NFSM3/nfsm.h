@@ -35,10 +35,15 @@ class NFSM;
 TransType run_lambda();
 class RUN {
 public:
-	RUN(std::shared_ptr<NFSM>);
-	~RUN() {
+	RUN(NFSM*);
+	virtual ~RUN() {
 		//delete m_nfsm;
 	}
+	//RUN object should not be copied.
+	RUN(const RUN&) = delete; //copy constructor
+	RUN& operator=(const RUN&) = delete; //copy assignment
+	//RUN(RUN&&) = delete; //move constructor
+	//RUN& operator=(RUN&&) = delete; //move assignment
 	TransType make_transition(char input, bool last_ch);
 	TransType make_transition(); // for empty string
 	friend TransType run_lambda(RUN * obj, std::vector<NFSM> * p_nfsms, bool last_ch, std::set<int> * visited_s, int * n_invalidated);
@@ -46,7 +51,7 @@ public:
 	int formal(int length);
 private:
 	std::vector<NFSM> m_nfsms;
-	std::shared_ptr<NFSM> m_nfsm;
+	NFSM* m_nfsm;
 	CWnd * m_output;
 };
 
@@ -56,11 +61,11 @@ class NFSM {
 public:
 	NFSM();
 	NFSM(std::string regexpr, CWnd * output);
-	virtual ~NFSM();
-	NFSM(const NFSM&);
-	NFSM& operator=(const NFSM&);
-	NFSM(NFSM&&);
-	NFSM& operator=(NFSM&&);
+	virtual ~NFSM(); //should be virtual for shared_ptr
+	NFSM(const NFSM&); //copy constructor
+	NFSM& operator=(const NFSM&); //copy assignment
+	NFSM(NFSM&&); //move constructor
+	NFSM& operator=(NFSM&&); //move assignment
 	friend TransType RUN::make_transition(char input, bool last_ch);
 	friend TransType run_lambda(RUN * obj, std::vector<NFSM> * p_nfsms, bool last_ch, std::set<int> * visited_s, int * n_invalidated);
 	friend RUN;
@@ -85,6 +90,7 @@ public:
 	std::wstring third_it_m();
 	std::wstring fourth_it();
 	std::wstring fifth_it();
+	void clean();
 	void set_regexpr(std::string st) {
 		m_constructed = false;
 		m_regexpr = st;
@@ -100,6 +106,9 @@ public:
 	}
 	bool is_valid() {
 		return m_valid;
+	}
+	bool is_constructed() {
+		return m_constructed;
 	}
 	void optimize();
 private:
@@ -155,7 +164,7 @@ class State {
 public:
 	State(int id, bool initial = false, bool finals = false);
 	State();
-	virtual ~State();
+	//virtual ~State();
 	friend NFSM;
 	friend TransType RUN::make_transition(char input, bool last_ch);
 	friend TransType run_lambda(RUN * obj, std::vector<NFSM> * p_nfsms, bool last_ch, std::set<int> * visited_s, int * n_invalidated);
@@ -200,5 +209,6 @@ bool is_bracket(char ch);
 bool is_meta_char_nb(char ch); //without ()
 bool is_star_plus_quest(char ch);
 std::wstring read_output_wnd(CWnd * wnd);
+void array_deleter(State* st);
 //int transition_for_symbol(NFSM * nfsm, char input, bool last_ch);
 

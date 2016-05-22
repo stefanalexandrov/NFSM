@@ -54,7 +54,7 @@ END_MESSAGE_MAP()
 IMPLEMENT_DYNAMIC(CNFSM3Dlg, CDialogEx);
 
 CNFSM3Dlg::CNFSM3Dlg(CWnd* pParent /*=NULL*/)
-	: CDialogEx(IDD_NFSM3_DIALOG, pParent), m_nfsm{new NFSM()}
+	: CDialogEx(IDD_NFSM3_DIALOG, pParent)
 {
 	EnableActiveAccessibility();
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
@@ -70,6 +70,7 @@ CNFSM3Dlg::~CNFSM3Dlg()
 	if (m_pAutoProxy != NULL)
 		m_pAutoProxy->m_pDialog = NULL;
 	//delete m_nfsm;
+	//m_nfsm.reset();
 }
 
 void CNFSM3Dlg::DoDataExchange(CDataExchange* pDX)
@@ -251,20 +252,11 @@ void CNFSM3Dlg::OnCheck()
 		return;
 	}
 
-	LPTSTR reg_expr = new TCHAR[reg_expr_size+1];
-	LPTSTR output = new TCHAR[output_size+1];
-
-	//wnd_output->SendMessage(EM_CLEAR, (WPARAM)MAX_REG_EXPR_SIZE, 0);
-
-	wnd_reg_expr->GetWindowTextW(reg_expr, reg_expr_size+1);
-	reg_expr_ws.assign(reg_expr); // from now on we work only with this wariable
-	delete[] reg_expr; // no longer needed
+	reg_expr_ws = read_output_wnd(wnd_reg_expr); // from now on we work only with this wariable
 
 	if (output_size > 0) {
-		wnd_output->GetWindowTextW(output, output_size+1);
-		output_normal_ws = output;
+		output_normal_ws = read_output_wnd(wnd_output);
 	}
-	delete[] output;
 	//set up progress bar
 	wnd_progress->SendMessage(PBM_SETRANGE, 0, MAKELPARAM(0, reg_expr_size));
 	wnd_progress->SendMessage(PBM_SETSTEP, (WPARAM)1, 0);
@@ -366,6 +358,10 @@ void CNFSM3Dlg::OnChangeRegExpr() {
 
 	CWnd * wnd_formal_result = GetDlgItem(IDC_STATIC2);
 	wnd_formal_result->SetWindowTextW(_T("not known"));
+	if (m_nfsm.is_constructed()) {
+		//m_nfsm.reset(new NFSM());
+		m_nfsm.clean();
+	}
 	return;
 }
 
@@ -376,14 +372,12 @@ void CNFSM3Dlg::OnTransform() {
 	CWnd * wnd_transform = GetDlgItem(IDC_BUTTON1);
 	CButton * chb_opt = (CButton *)GetDlgItem(IDC_CHECK2);
 	//m_nfsm = new NFSM(reg_expr_s, wnd_output);
-	m_nfsm->set_out_wnd(wnd_output);
-	m_nfsm->set_regexpr(reg_expr_s);
-	m_nfsm->construct();
+	m_nfsm.set_out_wnd(wnd_output);
+	m_nfsm.set_regexpr(reg_expr_s);
+	m_nfsm.construct();
 	if (chb_opt->GetCheck() == BST_CHECKED)
-		m_nfsm->optimize();
-	m_nfsm->write_nfsm("output.txt");
-	//Transition* te = new Transition();
-	//delete te;
+		m_nfsm.optimize();
+	m_nfsm.write_nfsm("output.txt");
 	//enable run button
 	CWnd * wnd_run = GetDlgItem(IDC_BUTTON4);
 	wnd_run->EnableWindow(TRUE);
@@ -397,7 +391,8 @@ void CNFSM3Dlg::OnFormal() {
 	CWnd * wnd_output = GetDlgItem(IDC_STATIC2);
 	CWnd * wnd_formal = GetDlgItem(IDC_BUTTON5);
 	std::wstring output_ws;
-	RUN check = RUN(m_nfsm);
+	RUN check(&m_nfsm);
+	//check = std::move(RUN(m_nfsm));
 	int bound = check.formal(0);
 	TCHAR number[50];
 	swprintf_s(number, 50, _T("%d"), bound);
@@ -422,7 +417,8 @@ void CNFSM3Dlg::OnRunNFSM()
 	output_ws.append(_T(" \r\n"));
 	wnd_output->SetWindowTextW(output_ws.c_str());
 
-	RUN check = RUN(m_nfsm);
+	//RUN check = RUN(m_nfsm);
+	RUN check(&m_nfsm);
 
 	bool accepted = false;
 	TransType result = TransType::NOT_FINAL;
