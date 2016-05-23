@@ -1552,7 +1552,7 @@ TransType RUN::transition_for_symbol(std::vector<NFSM> * p_nfsms, NFSM * nfsm, c
 				return TransType::FINAL_STATE;
 			else if (i->m_in->m_final_state) {
 				nfsm->set_invalid();
-				*(n_inval)++;
+				*(n_inval) += 1;
 			}
 			t_type = TransType::NOT_FINAL;
 		}
@@ -1564,7 +1564,7 @@ TransType RUN::transition_for_symbol(std::vector<NFSM> * p_nfsms, NFSM * nfsm, c
 				return TransType::FINAL_STATE;
 			else if (i->m_in->m_final_state) {
 				nfsm->set_invalid();
-				*(n_inval)++;
+				*(n_inval) += 1;
 			}
 			t_type = TransType::NOT_FINAL;
 		}
