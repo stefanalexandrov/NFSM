@@ -1361,8 +1361,7 @@ void NFSM::optimize() {
 			if (st->is_empty() == true)
 				continue;
 
-
-			if (st->get_in().size() == 1 && (st->get_in().at(0).get_symbol() == LAMBDA_CH)) { // just one input to the state
+			if (st->get_in().size() == 1 && (st->get_in().at(0).get_symbol() == LAMBDA_CH)) { // just one lambda-input to the state
 				for (auto it = st->get_out().begin(); it != st->get_out().end(); it++)
 					if (it->get_symbol() != LAMBDA_CH) // outputs only lambda
 						only_lambda = false;
@@ -1391,43 +1390,40 @@ void NFSM::optimize() {
 			}
 		}
 	}
-	//start with many lambda-inputs, one output
+	//start with many inputs, one output
 	num = 5;
 	while (num--) {
 		for (int i = start_id; i <= m_s_id; i++) {
-			State * st = &states[i];
+			State& st_from = states[i];
 			bool only_lambda = true;
-			if (st->is_empty() == true)
+			if (st_from.is_empty() == true)
 				continue;
-
-
-			if (st->get_out().size() == 1 && (st->get_out().at(0).get_symbol() == LAMBDA_CH)) { // just one input to the state
-				for (auto it = st->get_in().begin(); it != st->get_in().end(); it++)
-					if (it->get_symbol() != LAMBDA_CH) // outputs only lambda
-						only_lambda = false;
-			}
-			else
-				continue;
-			if (only_lambda) { // state is not needed, delete it
-				State * to = st->get_out().at(0).get_to();
-				//delete transition from the superflous state
-				for (auto it = to->get_out().begin(); it != to->get_out().end(); it++) {
-					if (it->get_from() == st) {
-						to->get_in().erase(it);
-						break;
-					}
+			for (auto j = st_from.get_out().begin(); j != st_from.get_out().end(); j++) {
+				State& st_to = *(j->get_to());
+				if (st_to.get_out().size() == 1 && (st_to.get_out().at(0).get_symbol() == LAMBDA_CH)) {// just one lambda-output from the state
+					for (auto it = st_to.get_in().begin(); it != st_to.get_in().end(); it++)
+						if (it->get_symbol() != LAMBDA_CH) // inputs only lambda
+							only_lambda = true;
 				}
-				// assign the inputs of the sperflous state to the next state
-				for (auto it = st->get_in().begin(); it != st->get_in().end(); it++) {
-					for (auto j = it->get_from()->get_out().begin(); j != it->get_from()->get_out().end(); j++) {
-						if (j->get_to() == st)
-							j->set_to(*to);
+				else
+					continue;
+				if (only_lambda) { // state is not needed, delete it
+					
+					//delete the transition to the superflous state
+					for (auto it = st_from.get_out().begin(); it != st_from.get_out().end(); it++) {
+						if (it->get_to() == &st_to) {
+							st_from.get_out().erase(it);
+							break;
+						}
 					}
-					to->get_in().push_back(*it);
+					// assign the inputs of the sperflous state to the next state
+					for (auto it = st_from.get_out().begin(); it != st_from.get_out().end(); it++) {
+							if (it->get_to() == &st_to)
+								it->set_to(*(st_to.get_out().at(0).get_to()));
+					}
+					// delete the state
+					states[i].set_empty(true);
 				}
-				// delete the state
-				states[i].set_empty(true);
-
 			}
 		}
 	}
