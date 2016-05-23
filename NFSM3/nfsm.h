@@ -123,7 +123,7 @@ public:
 	inline char get_symbol() const { return m_symbol; }
 private:
 	int m_id;
-	State * m_from;
+	State * m_from; // not valid
 	State * m_in;
 	char m_symbol;
 };
