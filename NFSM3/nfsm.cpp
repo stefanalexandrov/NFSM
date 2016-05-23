@@ -21,7 +21,7 @@ Transition::Transition(int id, char symbol, State * from, State * in) {
 	m_symbol = symbol;
 }
 Transition::~Transition() {};
-int Transition::get_id() {
+int Transition::get_id() const {
 	return m_id;
 }
 State * Transition::get_from_state() {
@@ -67,6 +67,7 @@ RUN::RUN(NFSM* machine) {
 	m_nfsms.reserve(MAX_NUMBER_OF_NFSM_COPIES);
 	m_output = machine->m_output;
 }
+/*
 NFSM::NFSM() : m_states{ new State[MAX_NUMBER_OF_STATES], std::default_delete<State[]>() } {
 	m_constructed = false;
 	m_regexpr = "";
@@ -83,7 +84,7 @@ NFSM::NFSM(const NFSM& nfsm) :m_1_structure{ nfsm.m_1_structure },
     m_3_structure{ nfsm.m_3_structure },
 	m_4_structure{ nfsm.m_4_structure },
 	m_or_structure{ nfsm.m_or_structure },
-    m_states{ nfsm.m_states },
+    //m_states{ nfsm.m_states },
 	m_current{ nullptr },
 	m_constructed{ nfsm.m_constructed },
 	m_valid{ nfsm.m_valid },
@@ -142,7 +143,7 @@ NFSM::NFSM(NFSM&& nfsm):m_1_structure{ std::move(nfsm.m_1_structure) },
     m_3_structure{ std::move(nfsm.m_3_structure) },
 	m_4_structure{ std::move(nfsm.m_4_structure) },
 	m_or_structure{ std::move(nfsm.m_or_structure) },
-    m_states{ nfsm.m_states }, //just grab elements without copying
+    //m_states{ nfsm.m_states }, //just grab elements without copying
 	m_current{ nfsm.m_current }, m_constructed{ nfsm.m_constructed },
     m_valid{ nfsm.m_valid }, m_regexpr{ std::move(nfsm.m_regexpr) }, m_output{ nfsm.m_output },
     m_s_id{ nfsm.m_s_id }, m_t_id{ nfsm.m_t_id }
@@ -167,6 +168,7 @@ NFSM& NFSM::operator=(NFSM&& nfsm) {
 	nfsm.m_current = nullptr;
 	return *this;
 }
+*/
 NFSM::NFSM(std::string regexpr, CWnd * output): NFSM() {
 	m_regexpr = regexpr;
 	m_output = output;
@@ -198,69 +200,94 @@ int NFSM::construct() {
 			symbols.push_back(reg_decom(*i, i));
 	}
 	for (std::vector<reg_decom>::iterator i = symbols.begin(); i != symbols.end(); ++i) {
-		m_1_structure.insert(SymbolAndNFSMpair(i->ch, make_one_symbol_NFSM(i->ch)));
+		std::string str{ i->ch };
+		make_one_symbol_NFSM(str);
 	}
 	output_ws.append(_T("Done! Number of NFSMs: "));
 	const int N_DIGITS = 10;
 	TCHAR number[N_DIGITS];
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_1_structure.size());
 	output_ws.append(number);
-	//Second iteration
-	output_ws.append(_T(">Second iteration: building NFSMs a single character followed by *, +, ? ... "));
-	std::string expr;
-	for (std::vector<reg_decom>::iterator i = meta_symbols.begin(); i != meta_symbols.end(); ++i) {
-		std::string::iterator ch;
-		if (i->pos != m_regexpr.begin()) {
-			ch = (i->pos);
-			--ch;
+
+	try {
+		//Second iteration
+		output_ws.append(_T(">Second iteration: building NFSMs a single character followed by *, +, ? ... "));
+		std::string expr;
+		for (std::vector<reg_decom>::iterator i = meta_symbols.begin(); i != meta_symbols.end(); ++i) {
+			std::string::iterator ch;
+			if (i->pos != m_regexpr.begin()) {
+				ch = (i->pos);
+				--ch;
+			}
+			else {
+				ch = (i->pos);
+			}
+			if (i->ch == '*' && *ch != ')' && !is_meta_char(*ch)) {
+				// creating NFSM for <char>* regular expression
+				std::string str{ *ch };
+				expr = *(ch);
+				expr += '*';
+				make_star_NFSM(str, m_1_structure, expr);
+			}
+			else if ((*i).ch == '+' && *ch != ')' && !is_meta_char(*ch)) {
+				// creating NFSM for <char>+ regular expression
+				std::string str{ *ch };
+				expr = *(ch);
+				expr += '+';
+				make_plus_NFSM(str, m_1_structure, expr);
+			}
+			else if ((*i).ch == '?' && *ch != ')' && !is_meta_char(*ch)) {
+				// creating NFSM for <char>+ regular expression
+				std::string str{ *ch };
+				expr = *(ch);
+				expr += '?';
+				make_question_NFSM(str, m_1_structure, expr);
+			}
+
 		}
-		else {
-			ch = (i->pos);
+		output_ws.append(_T("Done! Number of NFSMs: "));
+		swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_2_structure.size());
+		output_ws.append(number);
+		m_output->SetWindowTextW(output_ws.c_str());
+
+		try {
+			//Third iteration
+			output_ws.append(third_it_m());
+			m_output->SetWindowTextW(output_ws.c_str());
 		}
-		if (i->ch == '*' && *ch != ')' && !is_meta_char(*ch)) {
-			// creating NFSM for <char>* regular expression
-			StateCouple symbol_nfsm = m_1_structure.at(*ch); //accessing NFSM created for <char> reg expression
-			expr = *(ch);
-			expr += '*';
-			m_2_structure.insert(SymbolAndNFSMpairS(expr, make_star_NFSM(symbol_nfsm.m_init, symbol_nfsm.m_final)));
+		catch (std::out_of_range e) {
+			std::cerr << "range error\n" << e.what();
+			throw e;
 		}
-		else if ((*i).ch == '+' && *ch != ')' && !is_meta_char(*ch)) {
-			// creating NFSM for <char>+ regular expression
-			StateCouple symbol_nfsm = m_1_structure.at(*ch); //accessing NFSM created for <char> reg expression
-			expr = *(ch);
-			expr += '+';
-			m_2_structure.insert(SymbolAndNFSMpairS(expr, make_plus_NFSM(symbol_nfsm.m_init, symbol_nfsm.m_final)));
+		try {
+		    //Fourth iteration
+		    output_ws.append(fourth_it());
+	    }
+	    catch (std::out_of_range e) {
+		    std::cerr << "range error\n" << e.what();
+		    throw e;
+	    }
+		try {
+		    //Fifth iteration
+		    output_ws.append(fifth_it());
 		}
-		else if ((*i).ch == '?' && *ch != ')' && !is_meta_char(*ch)) {
-			// creating NFSM for <char>+ regular expression
-			StateCouple symbol_nfsm = m_1_structure.at(*ch); //accessing NFSM created for <char> reg expression
-			expr = *(ch);
-			expr += '?';
-			m_2_structure.insert(SymbolAndNFSMpairS(expr, make_question_NFSM(symbol_nfsm.m_init, symbol_nfsm.m_final)));
+		catch (std::out_of_range e) {
+			std::cerr << "range error\n" << e.what();
+			throw e;
 		}
 
 	}
-	output_ws.append(_T("Done! Number of NFSMs: "));
-	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_2_structure.size());
-	output_ws.append(number);
-	m_output->SetWindowTextW(output_ws.c_str());
-
-	//Third iteration
-	output_ws.append(third_it_m());
-	m_output->SetWindowTextW(output_ws.c_str());
-
-	//output_ws.append(third_it_m());
-	//Fourth iteration
-	output_ws.append(fourth_it());
-
-	//Fifth iteration
-	output_ws.append(fifth_it());
+	catch (std::out_of_range) {
+		std::cerr << "range error\n";
+	}
+	catch (...) {
+		std::cerr << "unknown exception thrown\n";
+	}
 	
 
 	//Concatenation
 	output_ws.append(_T(">Concatenation... "));
 	bool first_run = true;
-	StateCouple new_nfsm;
 	StateCouple sub_nfsm_1;
 	StateCouple sub_nfsm_2;
 	std::string used_nfsms = "";
@@ -284,7 +311,7 @@ int NFSM::construct() {
 			}
 			tmp += *i;
 			++i;
-			sub_nfsm_1 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
+			sub_nfsm_1 = copy_nfsm(tmp, m_or_structure);
 			if (i == end)
 				break;
 		} else if (*i == '$' && first_run == true ) {
@@ -296,7 +323,7 @@ int NFSM::construct() {
 			}
 			tmp += *i;
 			++i;
-			sub_nfsm_1 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
+			sub_nfsm_1 = copy_nfsm(tmp, m_3_structure);
 			if (i == end)
 				break;
 		}
@@ -304,11 +331,12 @@ int NFSM::construct() {
 			tmp += *i;
 			tmp += *pos;
 			i = ++pos;
-				sub_nfsm_1 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
+			sub_nfsm_1 = copy_nfsm(tmp, m_2_structure);
 		}
 		else if (first_run == true && pos != m_regexpr.end()) {
 			tmp += *i;
-			sub_nfsm_1 = copy_nfsm(m_1_structure.at(*i).m_init, m_1_structure.at(*i).m_final);
+			std::string str{ *i };
+			sub_nfsm_1 = copy_nfsm(str, m_1_structure);
 			++i;
 		}
 		if (i == m_regexpr.end() || pos == m_regexpr.end())
@@ -327,7 +355,7 @@ int NFSM::construct() {
 				++i;
 			}
 			tmp += *i;
-			sub_nfsm_2 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
+			sub_nfsm_2 = copy_nfsm(tmp, m_or_structure);
 		} else if (!end_of_s && *i == '$') {
 			tmp += *i;
 			++i;
@@ -336,22 +364,24 @@ int NFSM::construct() {
 					++i;
 			}
 			tmp += *i;
-			sub_nfsm_2 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
+			sub_nfsm_2 = copy_nfsm(tmp, m_3_structure);
 		}
 		else if (!end_of_s && is_meta_char(*pos)) {
 			tmp += *i;
 			tmp += *pos;
-			sub_nfsm_2 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
+			sub_nfsm_2 = copy_nfsm(tmp, m_2_structure);
 			i++;
 		}
 		else if (/*!end_of_s &&*/i != m_regexpr.end() && !is_meta_char(*i)) {
 			tmp += *i;
-			sub_nfsm_2 = copy_nfsm(m_1_structure.at(*i).m_init, m_1_structure.at(*i).m_final);
+			std::string str{ *i };
+			sub_nfsm_2 = copy_nfsm(str, m_1_structure);
 		}
 		else
 			break;
-		sub_nfsm_1 = connect_NFSM(sub_nfsm_1.m_init, sub_nfsm_1.m_final, sub_nfsm_2.m_init, sub_nfsm_2.m_final);
+		sub_nfsm_1 = connect_NFSM(sub_nfsm_1.m_str, *sub_nfsm_1.m_container, sub_nfsm_2.m_str, *sub_nfsm_2.m_container);
 	}
+	sub_nfsm_1.m_container = &m_4_structure;
 	m_4_structure.insert(SymbolAndNFSMpairS(m_regexpr, sub_nfsm_1));
 	m_current = sub_nfsm_1.m_init;
 	
@@ -428,42 +458,42 @@ std::wstring NFSM::third_it_m() {
 				std::string left = "";
 				std::string right = "";
 				std::string expr = "";
-				StateCouple nfsm_left;
-				StateCouple nfsm_right;
-
+				SymbolAndNFSMmapS* container_left;
+				SymbolAndNFSMmapS* container_right;
+				
 				// <symbol>|<symbol>
 				if (!is_meta_char(*one_before_or) && (*one_before_or != '%') && !is_meta_char(*one_after_or) &&
 					(two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != '%') {
-					char c_left = *one_before_or;
-					char c_right = *one_after_or;
-					expr += c_left;
+					left = *one_before_or;
+					right = *one_after_or;
+					expr += left;
 					expr += "|";
-					expr += c_right;
-					nfsm_left = m_1_structure.at(c_left);
-					nfsm_right = m_1_structure.at(c_right);
+					expr += right;
+					container_left = &m_1_structure;
+					container_right = &m_1_structure;
 
 				} // <symbol>metachar|<symbol>
 				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != '%') && *two_before_or != ')'&&
 					!is_meta_char(*one_after_or) && (two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != '%') {
 					left = *two_before_or;
 					left += *one_before_or;
-					char c_right = *one_after_or;
+					right = *one_after_or;
 					expr += left;
 					expr += "|";
-					expr += c_right;
-					nfsm_left = m_2_structure.at(left);
-					nfsm_right = m_1_structure.at(c_right);
+					expr += right;
+					container_left = &m_2_structure;
+					container_right = &m_1_structure;
 				}// <symbol>|<symbol>metachar
 				else if (!is_meta_char(*one_before_or) && (*one_before_or != '%') && *one_before_or != '$' &&
 					(two_after_or == end || is_star_plus_quest(*two_after_or)) && *one_after_or != '%') {
 					right = *one_after_or;
 					right += *two_after_or;
-					char c_left = *one_before_or;
-					expr += c_left;
+					left = *one_before_or;
+					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_1_structure.at(c_left);
-					nfsm_right = m_2_structure.at(right);
+					container_left = &m_1_structure;
+					container_right = &m_2_structure;
 				}
 				// <symbol>metachar|<symbol>metachar
 				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != '%') &&
@@ -475,8 +505,8 @@ std::wstring NFSM::third_it_m() {
 					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_2_structure.at(left);
-					nfsm_right = m_2_structure.at(right);
+					container_left = &m_2_structure;
+					container_right = &m_2_structure;
 				}
 				// %number%|<symbol>metachar 
 				else if ((*one_before_or == '%') && (two_after_or != end && is_star_plus_quest(*two_after_or))
@@ -487,31 +517,31 @@ std::wstring NFSM::third_it_m() {
 					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_or_structure.at(left);
-					nfsm_right = m_2_structure.at(right);
+					container_left = &m_or_structure;
+					container_right = &m_2_structure;
 				}
 				// %number%|<symbol>
 				else if ((*one_before_or == '%') && !is_meta_char(*one_after_or) &&
 					(two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != '%') {
 					left = read_or(one_before_or);
-					char c_right = *one_after_or;
+					right = *one_after_or;
 					expr += left;
 					expr += "|";
-					expr += c_right;
-					nfsm_left = m_or_structure.at(left);
-					nfsm_right = m_1_structure.at(c_right);
+					expr += right;
+					container_left = &m_or_structure;
+					container_right = &m_1_structure;
 				} // <symbol>|%number%
 				else if (!is_meta_char(*one_before_or) && (*one_before_or != '%') && (*one_after_or == '%')) {
 					do {
 						one_after_or++;
 					} while (*one_after_or != '%');
 					right = read_or(one_after_or);
-					char c_left = *one_before_or;
-					expr += c_left;
+					left = *one_before_or;
+					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_1_structure.at(c_left);
-					nfsm_right = m_or_structure.at(right);
+					container_left = &m_1_structure;
+					container_right = &m_or_structure;
 				} // <symbol>metachar|%number%
 				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != '%') && (*one_after_or == '%')) {
 					do {
@@ -523,19 +553,16 @@ std::wstring NFSM::third_it_m() {
 					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_2_structure.at(left);
-					nfsm_right = m_or_structure.at(right);
+					container_left = &m_2_structure;
+					container_right = &m_or_structure;
 				}
 				else {
 					//output_ws.append(fourth_it());
 					continue;
 				}
 
-				StateCouple new_nfsm = make_or_NFSM(nfsm_left.m_init, nfsm_left.m_final, nfsm_right.m_init, nfsm_right.m_final);
-				std::string replace = "%" + std::to_string(m_s_id) + "%";
-				std::string tmp_regepxr = m_regexpr.replace(m_regexpr.find(expr), expr.length(), replace);
-				m_regexpr = tmp_regepxr;
-				m_or_structure.insert(SymbolAndNFSMpairS(replace, new_nfsm));
+				StateCouple new_nfsm = make_or_NFSM(left, *container_left, right, *container_right);
+				
 				output_ws.append(_T("Subexpression being substituted: "));
 				std::wstring ws(expr.begin(), expr.end());
 				output_ws += ws;
@@ -635,12 +662,12 @@ std::wstring NFSM::fifth_it() {
 				std::string left = "";
 				std::string right = "";
 				std::string expr = "";
-				StateCouple nfsm_left;
-				StateCouple nfsm_right;
+				SymbolAndNFSMmapS* container_left;
+				SymbolAndNFSMmapS* container_right;
 
 				// ()metachar|<symbol>
 				if ((*one_before_or == '$') && (*one_after_or != '$') && (*one_after_or != '%') && (*one_after_or != '(') && (two_after_or == end || !is_meta_char_nb(*two_after_or))) {
-					char c_right = *one_after_or;
+					right = *one_after_or;
 					left = *one_before_or;
 					one_before_or--;
 					while (*one_before_or != '$' && is_numeric(*one_before_or)) {
@@ -650,9 +677,9 @@ std::wstring NFSM::fifth_it() {
 					left.insert(left.begin(), *one_before_or);
 					expr += left;
 					expr += "|";
-					expr += c_right;
-					nfsm_left = m_3_structure.at(left);
-					nfsm_right = m_1_structure.at(c_right);
+					expr += right;
+					container_left = &m_3_structure;
+					container_right = &m_1_structure;
 				} // ()metachar|<symbol>metachar
 				else if ((*one_before_or == '$') && (*one_after_or != '$') && (*one_after_or != '%') && (*one_after_or != '(') && (two_after_or != end && is_meta_char_nb(*two_after_or))) {
 					right = *one_after_or;
@@ -667,8 +694,8 @@ std::wstring NFSM::fifth_it() {
 					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_3_structure.at(left);
-					nfsm_right = m_2_structure.at(right);
+					container_left = &m_3_structure;
+					container_right = &m_2_structure;
 				} // ()metachar|()metachar
 				else if (*one_before_or == '$' && *one_after_or == '$') {
 					left = *one_before_or;
@@ -688,11 +715,11 @@ std::wstring NFSM::fifth_it() {
 					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_3_structure.at(left);
-					nfsm_right = m_3_structure.at(right);
+					container_left = &m_3_structure;
+					container_right = &m_3_structure;
 				} // <symbol>|()metachar
 				else if ((*one_before_or != '$') && (*one_before_or != '%') && (*one_before_or != ')') && !is_meta_char(*one_before_or) && *one_after_or == '$') {
-					char c_left = *one_before_or;
+					left = *one_before_or;
 					right = *one_after_or;
 					one_after_or++;
 					while (*one_after_or != '$' && is_numeric(*one_after_or)) {
@@ -700,11 +727,11 @@ std::wstring NFSM::fifth_it() {
 						one_after_or++;
 					}
 					right += *one_after_or;
-					expr += c_left;
+					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_1_structure.at(c_left);
-					nfsm_right = m_3_structure.at(right);
+					container_left = &m_1_structure;
+					container_right = &m_3_structure;
 				} // <symbol>metachar|()metachar
 				else if ((*one_before_or != '$') && (*one_before_or != '%') && (*one_before_or != ')') && is_meta_char(*one_before_or) && *one_after_or == '$') {
 					left = *two_before_or;
@@ -719,8 +746,8 @@ std::wstring NFSM::fifth_it() {
 					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_2_structure.at(left);
-					nfsm_right = m_3_structure.at(right);
+					container_left = &m_2_structure;
+					container_right = &m_3_structure;
 				}
 				// %number%|()metachar
 				else if ((*one_before_or == '%') &&  *one_after_or == '$') {
@@ -735,8 +762,8 @@ std::wstring NFSM::fifth_it() {
 					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_or_structure.at(left);
-					nfsm_right = m_3_structure.at(right);
+					container_left = &m_or_structure;
+					container_right = &m_3_structure;
 				}// ()metachar|%number%
 				else if ((*one_before_or == '$')  && (*one_after_or == '%')) {
 					do {
@@ -753,8 +780,8 @@ std::wstring NFSM::fifth_it() {
 					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_3_structure.at(left);
-					nfsm_right = m_or_structure.at(right);
+					container_left = &m_3_structure;
+					container_right = &m_or_structure;
 				} // %number%|%number%
 				else if ((*one_before_or == '%') && (*one_after_or == '%')) {
 					do {
@@ -765,8 +792,8 @@ std::wstring NFSM::fifth_it() {
 					expr += left;
 					expr += "|";
 					expr += right;
-					nfsm_left = m_or_structure.at(left);
-					nfsm_right = m_or_structure.at(right);
+					container_left = &m_or_structure;
+					container_right = &m_or_structure;
 				}
 				else if ((*one_after_or == '(' || *one_before_or == ')') && number_of_subcalls < 100) {
 					number_of_subcalls++;
@@ -785,11 +812,8 @@ std::wstring NFSM::fifth_it() {
 					break;
 				}
 
-				StateCouple new_nfsm = make_or_NFSM(nfsm_left.m_init, nfsm_left.m_final, nfsm_right.m_init, nfsm_right.m_final);
-				std::string replace = "%" + std::to_string(m_s_id) + "%";
-				std::string tmp_regepxr = m_regexpr.replace(m_regexpr.find(expr), expr.length(), replace);
-				m_regexpr = tmp_regepxr;
-				m_or_structure.insert(SymbolAndNFSMpairS(replace, new_nfsm));
+				StateCouple new_nfsm{ make_or_NFSM(left, *container_left, right, *container_right) };
+				
 				output_ws.append(_T("Subexpression being substituted: "));
 				std::wstring ws(expr.begin(), expr.end());
 				output_ws += ws;
@@ -805,11 +829,21 @@ std::wstring NFSM::fifth_it() {
 	return output_ws;
 }
 
-StateCouple NFSM::make_or_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2) {
+StateCouple NFSM::make_or_NFSM(std::string str1, SymbolAndNFSMmapS& container1,
+	std::string str2, SymbolAndNFSMmapS& container2) {
 	State* states = m_states.get();
+
+	StateCouple nfsm_in1 = container1.at(str1);
+	State * s_init_1 = nfsm_in1.m_init;
+	State * s_final_1 = nfsm_in1.m_final;
+
+	StateCouple nfsm_in2 = container2.at(str2);
+	State * s_init_2 = nfsm_in2.m_init;
+	State * s_final_2 = nfsm_in2.m_final;
+	
 	//copy nfsms
-	StateCouple left = copy_nfsm(s_init_1, s_final_1);
-	StateCouple right = copy_nfsm(s_init_2, s_final_2);
+	StateCouple left = copy_nfsm(str1, container1);
+	StateCouple right = copy_nfsm(str2, container2);
 	// create new init and final states
 	states[m_s_id] = State(m_s_id);
 	State * p_a = &(states[m_s_id]);
@@ -831,73 +865,24 @@ StateCouple NFSM::make_or_NFSM(State * s_init_1, State * s_final_1, State * s_in
 	left.m_final->set_transition(m_t_id++, LAMBDA_CH, p_b);
 	right.m_final->set_transition(m_t_id++, LAMBDA_CH, p_b);
 
-	return StateCouple(p_a, p_b);
+	std::string expr = str1 + '|' + str2;
+ 	std::string replace = "%" + std::to_string(m_s_id) + "%";
+	std::string tmp_regepxr = m_regexpr.replace(m_regexpr.find(expr), expr.length(), replace);
+	m_regexpr = tmp_regepxr;
+	StateCouple new_nfsm(p_a, p_b, replace, &m_or_structure);
+	m_or_structure.insert(SymbolAndNFSMpairS(replace, new_nfsm));
+	return new_nfsm;
 }
 
-StateCouple NFSM::copy_nfsm(State * init, State * final_s) {
-	//first copy initial state
-	State* states = m_states.get();
-	states[m_s_id] = *init;
-	init->m_empty = true;
-	states[m_s_id].set_id(m_s_id);
-	m_s_id++;
-	// then copy final state
-	states[m_s_id] = *final_s;
-	final_s->m_empty = true;
-	states[m_s_id].set_id(m_s_id);
-	states[m_s_id].set_final(true);
-	int final_id = m_s_id;
-	StateCouple copy = StateCouple(&states[m_s_id - 1], &states[m_s_id]);
-	m_s_id++;
-
-	// now copy states in between
-	int done = 0;
-	int done_check = 0;
-	std::vector<State *> current;
-	std::vector<State *> current_new;
-	std::map<int, int> book; // first int is id of copied state and second int is id of the copy
-	current.push_back(&states[m_s_id - 2]);
-	while (1) {
-		done_check = done;
-		for (std::vector<State *>::iterator j = current.begin(); j != current.end(); j++) {
-			for (std::vector<Transition>::iterator i = (*j)->m_out.begin(); i != (*j)->m_out.end(); i++) {
-				if (i->m_in == final_s) {
-					i->m_in = &(states[final_id]);
-					//current_new.push_back(&m_states[m_s_id]);
-					done++;
-				}
-				else if(i->m_in != NULL) {
-					if (book.find(i->m_in->m_id) != book.end()) {
-						State * from = &states[book.at(i->m_in->m_id)];
-						i->m_in = from;
-						from->m_in.push_back(Transition(i->m_id, i->m_symbol, *j, from));
-					}
-					else {
-						states[m_s_id] = *(i->m_in); // copy state
-						(i->m_in)->m_empty = true;
-						// book keeping
-						book[i->m_in->m_id] = m_s_id;
-
-						states[m_s_id].set_id(m_s_id);
-						i->m_in = &states[m_s_id]; // make transition to the newly copied state
-						states[m_s_id].m_in.clear();
-						states[m_s_id].m_in.push_back(Transition(i->m_id, i->m_symbol, *j, &states[m_s_id]));
-						current_new.push_back(&states[m_s_id]);
-						m_s_id++;
-					}
-					done++;
-				}
-			}
-			
+StateCouple NFSM::copy_nfsm(const std::string reg_expr, const SymbolAndNFSMmapS& container) {
+	StateCouple new_nfsm{ container.at(reg_expr) };
+	for (auto &st_new : new_nfsm.m_states) {
+		st_new.set_id(m_s_id++); // update IDs
+		for (auto &st_old : container.at(reg_expr).m_states) {
+			update_connections(st_new, st_old);
 		}
-		if (done_check == done)
-			break;
-		
-		current = current_new;
-		current_new.clear();
-		
 	}
-	return copy;
+	return new_nfsm;
 }
 bool NFSM::match(std::string str) {
 	return 0;
@@ -1134,10 +1119,10 @@ State * find_final(std::vector<State> * s) {
 			return &(*i);
 }
 
-StateCouple NFSM::make_star_NFSM(State * s_init, State * s_final) {
+StateCouple NFSM::make_star_NFSM(std::string str, SymbolAndNFSMmapS& container, std::string sub_expr) {
 	State* states = m_states.get();
 	//copy nfsm
-	StateCouple copy = copy_nfsm(s_init, s_final);
+	StateCouple copy = copy_nfsm(str, container);
 	// create new init and final states
 	states[m_s_id] = State(m_s_id);
 	State * p_a = &(states[m_s_id]);
@@ -1157,12 +1142,21 @@ StateCouple NFSM::make_star_NFSM(State * s_init, State * s_final) {
 	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, p_b);
 	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, copy.m_init);
 
-	return StateCouple(p_a, p_b);
+	if (sub_expr.find('(') != std::string::npos && sub_expr.find(')') != std::string::npos) {
+		StateCouple new_nfsm(p_a, p_b, sub_expr, &m_3_structure);
+		bracket_NFSM_update(sub_expr, new_nfsm);
+		return new_nfsm;
+	}
+	else {
+		StateCouple new_nfsm(p_a, p_b, sub_expr, &m_2_structure);
+		simple_metachar_NFSM_update(sub_expr, new_nfsm);
+		return new_nfsm;
+	}
 }
-StateCouple NFSM::make_plus_NFSM(State * s_init, State * s_final) {
+StateCouple NFSM::make_plus_NFSM(std::string str, SymbolAndNFSMmapS& container, std::string sub_expr) {
 	State* states = m_states.get();
 	//copy nfsm
-	StateCouple copy = copy_nfsm(s_init, s_final);
+	StateCouple copy = copy_nfsm(str, container);
 	// create new init and final states
 	states[m_s_id] = State(m_s_id);
 	State * p_a = &(states[m_s_id]);
@@ -1180,17 +1174,29 @@ StateCouple NFSM::make_plus_NFSM(State * s_init, State * s_final) {
 	p_a->set_transition(m_t_id++, LAMBDA_CH, copy.m_init);
 	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, p_b);
 	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, copy.m_init);
-	return StateCouple(p_a, p_b);
+
+	if (sub_expr.find('(') != std::string::npos && sub_expr.find(')') != std::string::npos) {
+		StateCouple new_nfsm(p_a, p_b, sub_expr, &m_3_structure);
+		bracket_NFSM_update(sub_expr, new_nfsm);
+		return new_nfsm;
+	}
+	else {
+		StateCouple new_nfsm(p_a, p_b, sub_expr, &m_2_structure);
+		simple_metachar_NFSM_update(sub_expr, new_nfsm);
+		return new_nfsm;
+	}
 }
-StateCouple NFSM::make_simple_NFSM(State * s_init, State * s_final) {
+StateCouple NFSM::make_simple_NFSM(std::string str, SymbolAndNFSMmapS& container, std::string sub_expr) {
 	//copy nfsm
-	StateCouple copy = copy_nfsm(s_init, s_final);
-	return copy;
+	StateCouple copy = copy_nfsm(str, container);
+	StateCouple new_nfsm(copy.m_init, copy.m_final, sub_expr, &m_3_structure);
+	bracket_NFSM_update(sub_expr, new_nfsm);
+	return new_nfsm;
 }
-StateCouple NFSM::make_question_NFSM(State * s_init, State * s_final) {
+StateCouple NFSM::make_question_NFSM(std::string str, SymbolAndNFSMmapS& container, std::string sub_expr) {
 	State* states = m_states.get();
 	//copy nfsm
-	StateCouple copy = copy_nfsm(s_init, s_final);
+	StateCouple copy = copy_nfsm(str, container);
 	// create new init and final states
 	states[m_s_id] = State(m_s_id);
 	State * p_a = &(states[m_s_id]);
@@ -1208,9 +1214,19 @@ StateCouple NFSM::make_question_NFSM(State * s_init, State * s_final) {
 	p_a->set_transition(m_t_id++, LAMBDA_CH, copy.m_init);
 	p_a->set_transition(m_t_id++, LAMBDA_CH, p_b);
 	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, p_b);
-	return StateCouple(p_a, p_b);
+
+	if (sub_expr.find('(') != std::string::npos && sub_expr.find(')') != std::string::npos) {
+		StateCouple new_nfsm(p_a, p_b, sub_expr, &m_3_structure);
+		bracket_NFSM_update(sub_expr, new_nfsm);
+		return new_nfsm;
+	}
+	else {
+		StateCouple new_nfsm(p_a, p_b, sub_expr, &m_2_structure);
+		simple_metachar_NFSM_update(sub_expr, new_nfsm);
+		return new_nfsm;
+	}
 }
-StateCouple NFSM::make_one_symbol_NFSM(char ch) {
+StateCouple NFSM::make_one_symbol_NFSM(std::string str) {
 	State* states = m_states.get();
 	states[m_s_id] = State(m_s_id);
 	State * p_a = &(states[m_s_id]);
@@ -1221,18 +1237,31 @@ StateCouple NFSM::make_one_symbol_NFSM(char ch) {
 	p_a->set_initial(true);
 	p_b->set_final(true);
 	// handle "." metachar
-	if (ch == '.')
+	if (str.front() == '.')
 		p_a->set_transition(m_t_id++, BETA_CH, p_b);
 	else
-		p_a->set_transition(m_t_id++, ch, p_b);
-	return StateCouple(p_a, p_b);
+		p_a->set_transition(m_t_id++, str.front(), p_b);
+
+	StateCouple new_nfsm(p_a, p_b, str, &m_1_structure);
+	m_1_structure.insert(SymbolAndNFSMpairS(str, new_nfsm));
+	return new_nfsm;
 }
-StateCouple NFSM::connect_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2) {
+StateCouple NFSM::connect_NFSM(std::string str1, SymbolAndNFSMmapS& container1, std::string str2, SymbolAndNFSMmapS& container2) {
+	StateCouple sc1 = container1.at(str1);
+	State * s_init_1 = sc1.m_init;
+	State * s_final_1 = sc1.m_final;
+	StateCouple sc2 = container2.at(str2);
+	State * s_init_2 = sc2.m_init;
+	State * s_final_2 = sc2.m_final;
+
 	s_final_1->set_final(false);
 	s_final_1->set_transition(m_t_id++, LAMBDA_CH, s_init_2);
 	s_init_2->set_initial(false);
 	s_final_2->set_final(true);
-	return StateCouple(s_init_1, s_final_2);
+
+	StateCouple new_nfsm(s_init_1, s_final_2, str1 + str2, &m_connect_structure);
+	m_connect_structure.insert(SymbolAndNFSMpairS(new_nfsm.m_str, new_nfsm));
+	return new_nfsm;
 }
 
 StateCouple NFSM::make_bracket_NFSM(std::string::iterator i, std::wstring & output_ws, char type) {
@@ -1255,7 +1284,7 @@ StateCouple NFSM::make_bracket_NFSM(std::string::iterator i, std::wstring & outp
 				tmp += *j;
 				sub_expr.insert(sub_expr.begin(), *j);
 				sub_expr.insert(sub_expr.begin(), *prev_pos);
-				sub_nfsm_1 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
+				sub_nfsm_1 = copy_nfsm(tmp, m_2_structure);
 				j = --prev_pos;
 			}
 			else if (*j == '%' && is_numeric(*(--j))) {
@@ -1267,7 +1296,7 @@ StateCouple NFSM::make_bracket_NFSM(std::string::iterator i, std::wstring & outp
 				}
 				tmp_2.insert(tmp_2.begin(), *j);
 				--j;
-				sub_nfsm_1 = copy_nfsm(m_or_structure.at(tmp_2).m_init, m_or_structure.at(tmp_2).m_final);
+				sub_nfsm_1 = copy_nfsm(tmp_2, m_or_structure);
 				sub_expr = tmp_2 + sub_expr;
 			}
 			else if (*j == '$' && is_numeric(*(--j))) {
@@ -1279,12 +1308,13 @@ StateCouple NFSM::make_bracket_NFSM(std::string::iterator i, std::wstring & outp
 				}
 				tmp_2.insert(tmp_2.begin(), *j);
 				--j;
-				sub_nfsm_1 = copy_nfsm(m_3_structure.at(tmp_2).m_init, m_3_structure.at(tmp_2).m_final);
+				sub_nfsm_1 = copy_nfsm(tmp_2, m_3_structure);
 				sub_expr = tmp_2 + sub_expr;
 			}
 			else if (!is_meta_char(*j)){
+				std::string str{ *j };
 				sub_expr.insert(sub_expr.begin(), *j);
-				sub_nfsm_1 = copy_nfsm(m_1_structure.at(*j).m_init, m_1_structure.at(*j).m_final);
+				sub_nfsm_1 = copy_nfsm(str, m_1_structure);
 				j = prev_pos;
 			}
 			first_iter == false;
@@ -1298,7 +1328,7 @@ StateCouple NFSM::make_bracket_NFSM(std::string::iterator i, std::wstring & outp
 				tmp += *j;
 				sub_expr.insert(sub_expr.begin(), *j);
 				sub_expr.insert(sub_expr.begin(), *prev_pos);
-				sub_nfsm_2 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
+				sub_nfsm_2 = copy_nfsm(tmp, m_2_structure);
 				j = prev_pos;
 			}
 			else if (*j == '%' && is_numeric(*(--j))) {
@@ -1310,7 +1340,7 @@ StateCouple NFSM::make_bracket_NFSM(std::string::iterator i, std::wstring & outp
 					--j;
 				}
 				tmp_2.insert(tmp_2.begin(), *j);
-				sub_nfsm_2 = copy_nfsm(m_or_structure.at(tmp_2).m_init, m_or_structure.at(tmp_2).m_final);
+				sub_nfsm_2 = copy_nfsm(tmp_2, m_or_structure);
 				sub_expr = tmp_2 + sub_expr;
 			}
 			else if (*j == '$' && is_numeric(*(--j))) {
@@ -1322,42 +1352,39 @@ StateCouple NFSM::make_bracket_NFSM(std::string::iterator i, std::wstring & outp
 					--j;
 				}
 				tmp_2.insert(tmp_2.begin(), *j);
-				sub_nfsm_2 = copy_nfsm(m_3_structure.at(tmp_2).m_init, m_3_structure.at(tmp_2).m_final);
+				sub_nfsm_2 = copy_nfsm(tmp_2, m_3_structure);
 				sub_expr = tmp_2 + sub_expr;
 			}
 			else if(!is_meta_char(*j)) {
+				std::string str{ *j };
 				sub_expr.insert(sub_expr.begin(), *j);
-				sub_nfsm_2 = copy_nfsm(m_1_structure.at(*j).m_init, m_1_structure.at(*j).m_final);
+				sub_nfsm_2 = copy_nfsm(str, m_1_structure);
 			}
 		}
 		else
 			break;
-		sub_nfsm_1 = connect_NFSM(sub_nfsm_2.m_init, sub_nfsm_2.m_final, sub_nfsm_1.m_init, sub_nfsm_1.m_final);
+		sub_nfsm_1 = connect_NFSM(sub_nfsm_2.m_str, *sub_nfsm_2.m_container, sub_nfsm_1.m_str, *sub_nfsm_1.m_container);
 	}
 	sub_expr.insert(sub_expr.begin(), '(');
 	output_ws.append(_T("Regular sub-expression being substituted: "));
 	
 	if (type == '*') {
-		new_nfsm = make_star_NFSM(sub_nfsm_1.m_init, sub_nfsm_1.m_final);
 		sub_expr += ")*";
+		new_nfsm = make_star_NFSM(sub_nfsm_1.m_str, *sub_nfsm_1.m_container, sub_expr);
 	}
 	else if (type == '+') {
-		new_nfsm = make_plus_NFSM(sub_nfsm_1.m_init, sub_nfsm_1.m_final);
 		sub_expr += ")+";
+		new_nfsm = make_plus_NFSM(sub_nfsm_1.m_str, *sub_nfsm_1.m_container, sub_expr);
 	}
 	else if (type == '?') {
-		new_nfsm = make_question_NFSM(sub_nfsm_1.m_init, sub_nfsm_1.m_final);
 		sub_expr += ")?";
+		new_nfsm = make_question_NFSM(sub_nfsm_1.m_str, *sub_nfsm_1.m_container, sub_expr);
 	}
 	else if (type == 'S') {// simple brackets without metachar
-		new_nfsm = make_simple_NFSM(sub_nfsm_1.m_init, sub_nfsm_1.m_final);
 		sub_expr += ")";
+		new_nfsm = make_simple_NFSM(sub_nfsm_1.m_str, *sub_nfsm_1.m_container, sub_expr);
 	}
 	
-	std::string replace = "$" + std::to_string(m_s_id) + "$";
-	std::string tmp_regepxr = m_regexpr.replace(m_regexpr.find(sub_expr), sub_expr.length(), replace);
-	m_regexpr = tmp_regepxr;
-	m_3_structure.insert(SymbolAndNFSMpairS(replace, new_nfsm));
 	std::wstring ws(sub_expr.begin(), sub_expr.end());
 	output_ws += ws;
 	output_ws.append(_T("\r\n "));
@@ -1367,6 +1394,15 @@ StateCouple NFSM::make_bracket_NFSM(std::string::iterator i, std::wstring & outp
 	output_ws.append(_T("\r\n "));
 	return new_nfsm;
 
+}
+void NFSM::bracket_NFSM_update(std::string sub_expr, StateCouple& new_nfsm) {
+	std::string replace = "$" + std::to_string(m_s_id) + "$";
+	std::string tmp_regepxr = m_regexpr.replace(m_regexpr.find(sub_expr), sub_expr.length(), replace);
+	m_regexpr = tmp_regepxr;
+	m_3_structure.insert(SymbolAndNFSMpairS(replace, new_nfsm));
+}
+void NFSM::simple_metachar_NFSM_update(std::string sub_expr, StateCouple& new_nfsm) {
+	m_2_structure.insert(SymbolAndNFSMpairS(sub_expr, new_nfsm));
 }
 
 void NFSM::optimize() {
@@ -1382,7 +1418,6 @@ void NFSM::optimize() {
 			bool only_lambda = true;
 			if (st->m_empty == true)
 				continue;
-
 
 			if (st->m_in.size() == 1 && (st->m_in.at(0).m_symbol == LAMBDA_CH)) { // just one input to the state
 				for (std::vector<Transition>::iterator it = st->m_out.begin(); it != st->m_out.end(); it++)
@@ -1401,13 +1436,7 @@ void NFSM::optimize() {
 					}
 				}
 				// assign the outputs of the sperflous state to the previous state
-				for (std::vector<Transition>::iterator it = st->m_out.begin(); it != st->m_out.end(); it++) {
-					for (std::vector<Transition>::iterator j = (it->m_in)->m_in.begin(); j != (it->m_in)->m_in.end(); j++) {
-						if (j->m_from == st)
-							j->m_from = from;
-					}
-					from->m_out.push_back(*it);
-				}
+				move_outputs_to(st, from);
 				// delete the state
 				states[i].m_empty = true;
 			}
@@ -1422,10 +1451,9 @@ void NFSM::optimize() {
 			if (st->m_empty == true)
 				continue;
 
-
-			if (st->m_out.size() == 1 && (st->m_out.at(0).m_symbol == LAMBDA_CH)) { // just one input to the state
+			if (st->m_out.size() == 1 && (st->m_out.at(0).m_symbol == LAMBDA_CH)) { // just one output from the state
 				for (std::vector<Transition>::iterator it = st->m_in.begin(); it != st->m_in.end(); it++)
-					if (it->m_symbol != LAMBDA_CH) // outputs only lambda
+					if (it->m_symbol != LAMBDA_CH) // inputs only lambda
 						only_lambda = false;
 			}
 			else
@@ -1440,19 +1468,47 @@ void NFSM::optimize() {
 					}
 				}
 				// assign the inputs of the sperflous state to the next state
-				for (std::vector<Transition>::iterator it = st->m_in.begin(); it != st->m_in.end(); it++) {
-					for (std::vector<Transition>::iterator j = (it->m_from)->m_out.begin(); j != (it->m_from)->m_out.end(); j++) {
-						if (j->m_in == st)
-							j->m_in = to;
-					}
-					to->m_in.push_back(*it);
-				}
+				move_inputs_to(st, to);
 				// delete the state
 				states[i].m_empty = true;
 
 			}
 		}
 	}
+	
+	//state with one lambda-output
+	num = 5;
+	while (num--) {
+		for (int i = start_id; i <= m_s_id; i++) {
+			State * st = &states[i];
+			bool remove = true;
+			if (st->m_empty == true)
+				continue;
+			if (st->m_out.size() == 1 && (st->m_out.at(0).m_symbol == LAMBDA_CH))  // just one output from the state
+				for (std::vector<Transition>::iterator it = st->m_in.begin(); it != st->m_in.end(); it++) {
+					if (it->m_symbol == LAMBDA_CH) // inputs only not lambda
+						remove = false;
+				}
+			else
+				continue;
+			if (remove) {
+				//the state is not needed
+				State * to = st->m_out.at(0).m_in;
+				//delete transition from the superflous state
+				for (std::vector<Transition>::iterator it = to->m_in.begin(); it != to->m_in.end(); it++) {
+					if (it->m_from == st) {
+						to->m_in.erase(it);
+						break;
+					}
+				}
+				// assign the inputs of the sperflous state to the next state
+				move_inputs_to(st, to);
+				// delete the state
+				states[i].m_empty = true;
+			}
+	    }
+    }
+	
 }
 
 bool is_numeric(char ch) {
@@ -1547,24 +1603,24 @@ TransType RUN::transition_for_symbol(std::vector<NFSM> * p_nfsms, NFSM * nfsm, c
 			NFSM tmp = *nfsm;
 			tmp.m_current = i->m_in;
 			NFSMs_tmp.push_back(tmp);
-			n_of_transitions++;
+			++n_of_transitions;
 			if (i->m_in->m_final_state && last_ch)
 				return TransType::FINAL_STATE;
 			else if (i->m_in->m_final_state) {
 				nfsm->set_invalid();
-				*(n_inval)++;
+				*(n_inval) += 1;
 			}
 			t_type = TransType::NOT_FINAL;
 		}
 		else if (nfsm->is_valid() && (i->m_symbol == input || i->m_symbol == BETA_CH
 			/*|| (formal && i->m_symbol != LAMBDA_CH)*/) && n_of_transitions == 0) {
 			nfsm->m_current = i->m_in;
-			n_of_transitions++;
+			++n_of_transitions;
 			if (i->m_in->m_final_state && last_ch)
 				return TransType::FINAL_STATE;
 			else if (i->m_in->m_final_state) {
 				nfsm->set_invalid();
-				*(n_inval)++;
+				*(n_inval) += 1;
 			}
 			t_type = TransType::NOT_FINAL;
 		}
@@ -1605,4 +1661,61 @@ void NFSM::clean() {
 	m_regexpr = "";
 	m_s_id = 0;
 	m_t_id = 0;
+}
+
+void move_inputs_to(State* from, State* to) {
+	// assign the inputs of the sperflous state to the next state
+	for (std::vector<Transition>::iterator it = from->m_in.begin(); it != from->m_in.end(); it++) {
+		for (std::vector<Transition>::iterator j = (it->m_from)->m_out.begin(); j != (it->m_from)->m_out.end(); j++) {
+			if (j->m_in == from) {
+				j->m_in = to;
+				to->m_in.push_back(*j);
+			}
+		}
+		
+	}
+}
+void move_outputs_to(State* from, State* to) {
+	for (std::vector<Transition>::iterator it = from->m_out.begin(); it != from->m_out.end(); it++) {
+		for (std::vector<Transition>::iterator j = (it->m_in)->m_in.begin(); j != (it->m_in)->m_in.end(); j++) {
+			if (j->m_from == from) {
+				j->m_from = to;
+				to->m_out.push_back(*j);
+			}
+		}
+	}
+}
+
+void update_connections(State& new_st, const State& old_st) {
+	// update outward transitions
+	for (auto it = new_st.m_out.begin(); it != new_st.m_out.end(); it++) {
+		it->m_from = &new_st;
+		/*
+		for (auto j = (it->m_in)->m_in.begin(); j != (it->m_in)->m_in.end(); j++)
+			if (j->m_from == old_st)
+				j->m_from = new_st;
+		*/
+	}
+	//update inward transitions
+	for (auto it = new_st.m_in.begin(); it != new_st.m_in.end(); it++) {
+		it->m_in = &new_st;
+		for (auto j = (it->m_from)->m_out.begin(); j != (it->m_from)->m_out.end(); j++)
+			if (j->m_in == &old_st)
+				j->m_in = &new_st;
+	}
+}
+
+void Transition::set_transition_to(State* st, int* current_id, const char symbol, State* old) {
+	m_in = st;
+	bool old_found = false;
+	//update transition of st
+	if (old)
+	    for (std::vector<Transition>::iterator it = st->m_in.begin(); it != st->m_in.end(); it++) {
+			if (it->m_from == old) {
+				it->m_from = m_from;
+				old_found = true;
+			}
+	    }
+	if (!old_found)
+		st->m_in.push_back(Transition(++(*current_id), symbol, m_from, st));
 }
