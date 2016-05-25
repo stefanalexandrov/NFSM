@@ -118,9 +118,9 @@ void Thompsons::second_stage() {
 			ch = (i->pos);
 			--ch;
 		}
-		else {
+		else
 			ch = (i->pos);
-		}
+
 		if (i->ch == '*' && *ch != ')' && !is_meta_char(*ch)) {
 			// creating NFSM for <char>* regular expression
 			StateCouple symbol_nfsm = m_1_structure.at(*ch); //accessing NFSM created for <char> reg expression
@@ -153,7 +153,7 @@ void Thompsons::second_stage() {
 
 void Thompsons::third_stage() {
 	bool do_it = true;
-	m_output_ws.append(_T(">Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... "));
+	m_output_ws.append(_T(">Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... \r\n"));
 	while (do_it) {
 		std::string::iterator begin = m_regexpr.begin();
 		std::string::iterator end = m_regexpr.end();
@@ -161,23 +161,19 @@ void Thompsons::third_stage() {
 			if (i == --m_regexpr.end())
 				do_it = false;
 			if (*i == '|') {
-				std::string::iterator one_before_or = i;
-				one_before_or--;
-				std::string::iterator one_after_or = i;
-				one_after_or++;
-				std::string::iterator two_before_or = end;
-				std::string::iterator two_after_or = end;
+				std::string::iterator one_before_or = { i }, one_after_or = { i };
+				std::string::iterator two_before_or = --one_before_or;
+				std::string::iterator two_after_or = ++one_after_or;
 				// check for end of string
-				if (one_before_or != m_regexpr.begin()) {
-					two_before_or = one_before_or;
-					two_before_or--;
-				}
-				if (one_after_or != --m_regexpr.end()) {
-					two_after_or = one_after_or;
-					two_after_or++;
-				}
-				if ((two_before_or != end) && (*one_after_or == '(' || *two_before_or == ')' || *one_after_or == BRACKET_DELIM || *one_before_or == BRACKET_DELIM ||
-					(*one_after_or == OR_DELIM && *one_before_or == OR_DELIM))) {
+				if (one_before_or != m_regexpr.begin())
+					--two_before_or;
+
+				if (one_after_or != --m_regexpr.end())
+					++two_after_or;
+
+				if ((two_before_or != end) && (*one_after_or == '(' || *two_before_or == ')'
+					|| *one_after_or == BRACKET_DELIM || *one_before_or == BRACKET_DELIM
+					||	(*one_after_or == OR_DELIM && *one_before_or == OR_DELIM))) {
 					continue;
 				}
 				std::string left = "";
@@ -186,8 +182,8 @@ void Thompsons::third_stage() {
 				StateCouple nfsm_left, nfsm_right;
 
 				// <symbol>|<symbol>
-				if (!is_meta_char(*one_before_or) && (*one_before_or != OR_DELIM) && !is_meta_char(*one_after_or) &&
-					(two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != OR_DELIM) {
+				if (!is_meta_char(*one_before_or) && (*one_before_or != OR_DELIM) && !is_meta_char(*one_after_or)
+					&& (two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != OR_DELIM) {
 					char c_left = *one_before_or;
 					char c_right = *one_after_or;
 					expr += c_left; expr += "|"; expr += c_right;
@@ -195,8 +191,9 @@ void Thompsons::third_stage() {
 					nfsm_right = m_1_structure.at(c_right);
 
 				} // <symbol>metachar|<symbol>
-				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != OR_DELIM) && *two_before_or != ')'&&
-					!is_meta_char(*one_after_or) && (two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != OR_DELIM) {
+				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != OR_DELIM) && *two_before_or != ')'
+					&& !is_meta_char(*one_after_or) && (two_after_or == end || !is_meta_char_nb(*two_after_or))
+					&& *one_after_or != OR_DELIM) {
 					left = *two_before_or;
 					left += *one_before_or;
 					char c_right = *one_after_or;
@@ -204,8 +201,8 @@ void Thompsons::third_stage() {
 					nfsm_left = m_2_structure.at(left);
 					nfsm_right = m_1_structure.at(c_right);
 				}// <symbol>|<symbol>metachar
-				else if (!is_meta_char(*one_before_or) && (*one_before_or != OR_DELIM) && *one_before_or != BRACKET_DELIM &&
-					(two_after_or == end || is_star_plus_quest(*two_after_or)) && *one_after_or != OR_DELIM) {
+				else if (!is_meta_char(*one_before_or) && (*one_before_or != OR_DELIM) && *one_before_or != BRACKET_DELIM
+					&& (two_after_or == end || is_star_plus_quest(*two_after_or)) && *one_after_or != OR_DELIM) {
 					right = *one_after_or;
 					right += *two_after_or;
 					char c_left = *one_before_or;
@@ -214,8 +211,8 @@ void Thompsons::third_stage() {
 					nfsm_right = m_2_structure.at(right);
 				}
 				// <symbol>metachar|<symbol>metachar
-				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != OR_DELIM) &&
-					(two_after_or != end && is_star_plus_quest(*two_after_or)) && *one_after_or != OR_DELIM) {
+				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != OR_DELIM)
+					&& (two_after_or != end && is_star_plus_quest(*two_after_or)) && *one_after_or != OR_DELIM) {
 					right = *one_after_or;
 					right += *two_after_or;
 					left = *two_before_or;
@@ -229,29 +226,30 @@ void Thompsons::third_stage() {
 					&& *one_after_or != OR_DELIM) {
 					right = *one_after_or;
 					right += *two_after_or;
-					left = read_subexpr_backwards(one_before_or, OR_DELIM);
+					left = read_subexpr_backwards(one_before_or, OR_DELIM); one_before_or--;
 					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_or_structure.at(left);
 					nfsm_right = m_2_structure.at(right);
 				}
 				// %number%|<symbol>
-				else if ((*one_before_or == OR_DELIM) && !is_meta_char(*one_after_or) &&
-					(two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != OR_DELIM) {
-					left = read_subexpr_backwards(one_before_or, OR_DELIM);
+				else if ((*one_before_or == OR_DELIM) && !is_meta_char(*one_after_or)
+					&&	(two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != OR_DELIM) {
+					left = read_subexpr_backwards(one_before_or, OR_DELIM); one_before_or--;
 					char c_right = *one_after_or;
 					expr += left; expr += "|"; expr += c_right;
 					nfsm_left = m_or_structure.at(left);
 					nfsm_right = m_1_structure.at(c_right);
 				} // <symbol>|%number%
 				else if (!is_meta_char(*one_before_or) && (*one_before_or != OR_DELIM) && (*one_after_or == OR_DELIM)) {
-					right = read_subexpr_forwards(one_after_or, OR_DELIM);
+					right = read_subexpr_forwards(one_after_or, OR_DELIM); one_after_or++;
 					char c_left = *one_before_or;
 					expr += c_left; expr += "|"; expr += right;
 					nfsm_left = m_1_structure.at(c_left);
 					nfsm_right = m_or_structure.at(right);
 				} // <symbol>metachar|%number%
-				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != OR_DELIM) && (*one_after_or == OR_DELIM)) {
-					right = read_subexpr_forwards(one_after_or, OR_DELIM);
+				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != OR_DELIM)
+					&& (*one_after_or == OR_DELIM)) {
+					right = read_subexpr_forwards(one_after_or, OR_DELIM); one_after_or++;
 					left = *two_before_or;
 					left += *one_before_or;
 					expr += left; expr += "|"; expr += right;
@@ -289,8 +287,7 @@ void Thompsons::third_stage() {
 }
 void Thompsons::fourth_stage() {
 	m_output_ws.append(_T(">Fourth iteration: building NFSMs for brackets... "));
-	bool abort = false;
-	bool do_only_simple = false;
+	bool abort = false, do_only_simple = false;
 	while (m_regexpr.find(")") != std::string::npos && !abort) {
 		for (std::string::iterator i = m_regexpr.begin(); i != m_regexpr.end(); ++i) {
 			std::string::iterator pos = i;
@@ -340,42 +337,37 @@ void Thompsons::fourth_stage() {
 }
 void Thompsons::fifth_stage() {
 	int number_of_subcalls = 0;
-	m_output_ws.append(_T(">Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... "));
-	m_output_ws.append(_T("\r\n "));
+	m_output_ws.append(_T(">Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... \r\n"));
 	while (m_regexpr.find("|") != std::string::npos) {
-		std::string::iterator begin = m_regexpr.begin();
-		std::string::iterator end = m_regexpr.end();
+		std::string::iterator begin = { m_regexpr.begin() }, end = { m_regexpr.end() };
 		for (std::string::iterator i = begin; i != end; i++) {
 			if (*i == '|') {
-				std::string::iterator one_before_or = i;
-				one_before_or--;
-				std::string::iterator one_after_or = i;
-				one_after_or++;
-				std::string::iterator two_before_or = end;
-				std::string::iterator two_after_or = end;
+				std::string::iterator one_before_or = { i }, one_after_or = { i };
+				std::string::iterator two_before_or = --one_before_or;
+				std::string::iterator two_after_or = ++one_after_or;
 				// check for end of string
-				if (one_before_or != m_regexpr.begin()) {
-					two_before_or = one_before_or;
-					two_before_or--;
-				}
-				if (one_after_or != --m_regexpr.end()) {
-					two_after_or = one_after_or;
-					two_after_or++;
-				}
-				std::string left = "";
-				std::string right = "";
-				std::string expr = "";
+				if (one_before_or != m_regexpr.begin())
+					--two_before_or;
+		
+				if (one_after_or != --m_regexpr.end())
+					++two_after_or;
+
+				std::string left, right, expr = { "" };
 				StateCouple nfsm_left, nfsm_right;
 
 				// ()metachar|<symbol>
-				if ((*one_before_or == BRACKET_DELIM) && (*one_after_or != BRACKET_DELIM) && (*one_after_or != OR_DELIM) && (*one_after_or != '(') && (two_after_or == end || !is_meta_char_nb(*two_after_or))) {
+				if ((*one_before_or == BRACKET_DELIM) && (*one_after_or != BRACKET_DELIM)
+					&& (*one_after_or != OR_DELIM) && (*one_after_or != '(')
+					&& (two_after_or == end || !is_meta_char_nb(*two_after_or))) {
 					char c_right = *one_after_or;
 					left = read_subexpr_backwards(one_before_or, BRACKET_DELIM);
 					expr += left; expr += "|"; expr += c_right;
 					nfsm_left = m_3_structure.at(left);
 					nfsm_right = m_1_structure.at(c_right);
 				} // ()metachar|<symbol>metachar
-				else if ((*one_before_or == BRACKET_DELIM) && (*one_after_or != BRACKET_DELIM) && (*one_after_or != OR_DELIM) && (*one_after_or != '(') && (two_after_or != end && is_meta_char_nb(*two_after_or))) {
+				else if ((*one_before_or == BRACKET_DELIM) && (*one_after_or != BRACKET_DELIM)
+					&& (*one_after_or != OR_DELIM) && (*one_after_or != '(')
+					&& (two_after_or != end && is_meta_char_nb(*two_after_or))) {
 					right = *one_after_or;
 					right += *two_after_or;
 					left = read_subexpr_backwards(one_before_or, BRACKET_DELIM);
@@ -385,19 +377,21 @@ void Thompsons::fifth_stage() {
 				} // ()metachar|()metachar
 				else if (*one_before_or == BRACKET_DELIM && *one_after_or == BRACKET_DELIM) {
 					left = read_subexpr_backwards(one_before_or, BRACKET_DELIM);
-					right = read_subexpr_forwards(one_after_or, BRACKET_DELIM);
+					right = read_subexpr_forwards(one_after_or++, BRACKET_DELIM);
 					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_3_structure.at(left);
 					nfsm_right = m_3_structure.at(right);
 				} // <symbol>|()metachar
-				else if ((*one_before_or != BRACKET_DELIM) && (*one_before_or != OR_DELIM) && (*one_before_or != ')') && !is_meta_char(*one_before_or) && *one_after_or == BRACKET_DELIM) {
+				else if ((*one_before_or != BRACKET_DELIM) && (*one_before_or != OR_DELIM)
+					&& (*one_before_or != ')') && !is_meta_char(*one_before_or) && *one_after_or == BRACKET_DELIM) {
 					char c_left = *one_before_or;
 					right = read_subexpr_forwards(one_after_or, BRACKET_DELIM);
 					expr += c_left; expr += "|"; expr += right;
 					nfsm_left = m_1_structure.at(c_left);
 					nfsm_right = m_3_structure.at(right);
 				} // <symbol>metachar|()metachar
-				else if ((*one_before_or != BRACKET_DELIM) && (*one_before_or != OR_DELIM) && (*one_before_or != ')') && is_meta_char(*one_before_or) && *one_after_or == BRACKET_DELIM) {
+				else if ((*one_before_or != BRACKET_DELIM) && (*one_before_or != OR_DELIM)
+					&& (*one_before_or != ')') && is_meta_char(*one_before_or) && *one_after_or == BRACKET_DELIM) {
 					left = *two_before_or;
 					left += *one_before_or;
 					right = read_subexpr_forwards(one_after_or, BRACKET_DELIM);
@@ -433,9 +427,7 @@ void Thompsons::fifth_stage() {
 				}
 				else if (number_of_subcalls < 100) {
 					number_of_subcalls++;
-					third_stage();
-					fourth_stage();
-					third_stage();
+					third_stage(); fourth_stage(); third_stage();
 					break;
 				}
 				else {
@@ -466,14 +458,12 @@ void Thompsons::fifth_stage() {
 void Thompsons::concatenate() {
 	m_output_ws.append(_T(">Concatenation... "));
 	bool first_run = true;
-	StateCouple new_nfsm;
-	StateCouple sub_nfsm_1;
-	StateCouple sub_nfsm_2;
+	StateCouple new_nfsm, sub_nfsm_1, sub_nfsm_2;
 	std::string used_nfsms = "";
 	std::string::iterator begin = m_regexpr.begin();
 	std::string::iterator end = m_regexpr.end();
 	bool end_of_s = false;
-	for (std::string::iterator i = begin; i != end; ++i) {
+	for (auto i = begin; i != end; ++i) {
 
 		std::string::iterator pos = i;
 		if (i == m_regexpr.end() || ++pos == m_regexpr.end())
@@ -482,12 +472,14 @@ void Thompsons::concatenate() {
 		std::string tmp = "";
 		if (*i == OR_DELIM && first_run == true) {
 			tmp += read_subexpr_forwards(i , OR_DELIM);
+			i++;
 			sub_nfsm_1 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
 			if (i == end)
 				break;
 		}
 		else if (*i == BRACKET_DELIM && first_run == true) {
 			tmp += read_subexpr_forwards(i, BRACKET_DELIM);
+			i++;
 			sub_nfsm_1 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
 			if (i == end)
 				break;
@@ -513,12 +505,10 @@ void Thompsons::concatenate() {
 		tmp = "";
 		if (!end_of_s && *i == OR_DELIM) {
 			tmp += read_subexpr_forwards(i, OR_DELIM);
-			i--;
 			sub_nfsm_2 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
 		}
 		else if (!end_of_s && *i == BRACKET_DELIM) {
 			tmp += read_subexpr_forwards(i, BRACKET_DELIM);
-			i--;
 			sub_nfsm_2 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
 		}
 		else if (!end_of_s && is_meta_char(*pos)) {
@@ -670,13 +660,13 @@ int RUN::formal(int length) { //compute bounds on number of NFSM copies
 	int n_invalidated = 0;
 	while (runs.size() > 0) {
 		
-		for (std::vector<std::vector<NFSM>>::iterator tt = runs.begin(); tt != runs.end(); tt++) {
+		for (auto tt = runs.begin(); tt != runs.end(); tt++) {
 
 			run_lambda(NULL, &(*tt), false, &visited_states, &n_invalidated); // first stage: perform all possible §-transitions
 			// lambda-transitions are creators of the copies
 			//actually delete nfsms 
 			while (n_invalidated-- > 0)
-				for (std::vector<NFSM>::iterator j = tt->begin(); j != tt->end(); j++) {
+				for (auto j = tt->begin(); j != tt->end(); j++) {
 					if (!j->is_valid()) {
 						tt->erase(j);
 						break;
@@ -688,28 +678,28 @@ int RUN::formal(int length) { //compute bounds on number of NFSM copies
 				max_n = tt->size(); // update max // record max number of states reached
 		}
 		std::vector<NFSM> tmp;
-		for (std::vector<std::vector<NFSM>>::iterator tt = runs.begin(); tt != runs.end(); tt++) {
+		for (auto tt = runs.begin(); tt != runs.end(); tt++) {
 			tmp.insert(tmp.end(), tt->begin(), tt->end());
 		}
 				// create a set of symbols of all transitions of current states reached
 				set_of_symbols.clear(); // each time a new set of symbols
-				for (std::vector<NFSM>::iterator it = tmp.begin(); it != tmp.end(); it++) {
-					for (std::vector<Transition>::iterator tr = it->get_current()->get_out().begin(); tr != it->get_current()->get_out().end(); tr++) {
+				for (auto it = tmp.begin(); it != tmp.end(); it++) {
+					for (auto tr = it->get_current()->get_out().begin(); tr != it->get_current()->get_out().end(); tr++) {
 						if (tr->get_symbol() != LAMBDA_CH)
 							set_of_symbols.insert(tr->get_symbol());
 					}
 				}
 			
-				for (std::set<char>::iterator it = set_of_symbols.begin(); it != set_of_symbols.end(); it++) {
+				for (auto it = set_of_symbols.begin(); it != set_of_symbols.end(); it++) {
 					//create NFSM vector for each symbol, merge NFSM from other NFSM vectors
 					std::vector<NFSM> tmp_2 = tmp;
 					// normal transitions are destructors of copies
-					for (std::vector<NFSM>::iterator j = tmp_2.begin(); j != tmp_2.end(); j++) {
+					for (auto j = tmp_2.begin(); j != tmp_2.end(); j++) {
 						transition_for_symbol(&tmp_2, &(*j), *it, false, &n_invalidated, true);
 					}
 					//actually delete nfsms 
 					while (n_invalidated-- > 0)
-						for (std::vector<NFSM>::iterator j = tmp_2.begin(); j != tmp_2.end(); j++) {
+						for (auto j = tmp_2.begin(); j != tmp_2.end(); j++) {
 							if (!j->is_valid()) {
 								tmp_2.erase(j);
 								break;
@@ -772,13 +762,13 @@ TransType RUN::make_transition(char input, bool last_ch)
 	return t_type;
 }
 
-TransType run_lambda(RUN * obj, std::vector<NFSM> * p_nfsms, bool last_ch, std::set<int> * visited_s = NULL, int * n_invalidated = NULL) {
+TransType run_lambda(RUN * obj, std::vector<NFSM> * p_nfsms,
+	bool last_ch, std::set<int> * visited_s = NULL, int * n_invalidated = NULL) {
 	TransType t_type;
 	int n_invalidated_2 = 0;
 	int max_t = 20;
 	std::set<int> visited;
-	std::set<int>::iterator cur;
-	std::set<int>::iterator no_rep;
+	std::set<int>::iterator cur, no_rep;
 	std::vector<NFSM> * nfsm = NULL;
 	if (obj != NULL) 
 		nfsm = &(obj->m_nfsms);
@@ -841,7 +831,7 @@ TransType run_lambda(RUN * obj, std::vector<NFSM> * p_nfsms, bool last_ch, std::
 	} 
 	while (lambda && (--max_t > 0));
 
-	for (std::vector<NFSM>::iterator j = nfsm->begin(); j != nfsm->end(); j++) {
+	for (auto j = nfsm->begin(); j != nfsm->end(); j++) {
 		if (j->get_current()->is_final() && !last_ch) {
 			j->set_invalid();
 			n_invalidated_2++;
@@ -849,7 +839,7 @@ TransType run_lambda(RUN * obj, std::vector<NFSM> * p_nfsms, bool last_ch, std::
 	}
 	//actually delete nfsms 
 	while (n_invalidated_2-- > 0)
-		for (std::vector<NFSM>::iterator j = nfsm->begin(); j != nfsm->end(); j++) {
+		for (auto j = nfsm->begin(); j != nfsm->end(); j++) {
 			if (!j->is_valid() && j->get_current()->is_final()) {
 				nfsm->erase(j);
 				break;
@@ -1008,12 +998,12 @@ StateCouple Thompsons::make_bracket_NFSM(std::string::iterator i, std::wstring &
 				j = --prev_pos;
 			}
 			else if (*j == OR_DELIM && is_numeric(*(--j))) {
-				std::string tmp_2 = read_subexpr_backwards(++j, OR_DELIM);
+				std::string tmp_2 = read_subexpr_backwards(++j, OR_DELIM); j--;
 				sub_nfsm_1 = copy_nfsm(m_or_structure.at(tmp_2).m_init, m_or_structure.at(tmp_2).m_final);
 				sub_expr = tmp_2 + sub_expr;
 			}
 			else if (*j == BRACKET_DELIM && is_numeric(*(--j))) {
-				std::string tmp_2 = read_subexpr_backwards(++j, BRACKET_DELIM);
+				std::string tmp_2 = read_subexpr_backwards(++j, BRACKET_DELIM); j--;
 				sub_nfsm_1 = copy_nfsm(m_3_structure.at(tmp_2).m_init, m_3_structure.at(tmp_2).m_final);
 				sub_expr = tmp_2 + sub_expr;
 			}
@@ -1038,13 +1028,11 @@ StateCouple Thompsons::make_bracket_NFSM(std::string::iterator i, std::wstring &
 			}
 			else if (*j == OR_DELIM && is_numeric(*(--j))) {
 				std::string tmp_2 = read_subexpr_backwards(++j, OR_DELIM);
-				j++;
 				sub_nfsm_2 = copy_nfsm(m_or_structure.at(tmp_2).m_init, m_or_structure.at(tmp_2).m_final);
 				sub_expr = tmp_2 + sub_expr;
 			}
 			else if (*j == BRACKET_DELIM && is_numeric(*(--j))) {
 				std::string tmp_2 = read_subexpr_backwards(++j, BRACKET_DELIM);
-				j++;
 				sub_nfsm_2 = copy_nfsm(m_3_structure.at(tmp_2).m_init, m_3_structure.at(tmp_2).m_final);
 				sub_expr = tmp_2 + sub_expr;
 			}
@@ -1091,10 +1079,12 @@ StateCouple Thompsons::make_bracket_NFSM(std::string::iterator i, std::wstring &
 	return new_nfsm;
 
 }
-
-void NFSM::optimize() {
-	State* states = m_states.get();
-	int start_id = m_nfsm.m_init->get_id();
+void NFSM::optimize(Optimizer& opt) {
+	opt.optimize(m_nfsm.m_init, m_s_id);
+}
+void SuperflousStatesRemover::optimize(State* init, int m_s_id) {
+	State* states = init;
+	int start_id = init->get_id();
 
 	int num = 5;
 	while (num--) {
@@ -1199,24 +1189,25 @@ bool is_bracket(char ch) {
 	default: return false;
 	}
 }
-void NFSM::write_nfsm(std::string file_name) {
+int NFSM::save(NFSMSaver& saver) {
+	return saver.save("nfsm.txt", m_nfsm.m_init, m_s_id);
+}
+int DOTSaver::save(std::string file_name, State* start, int m_s_id) {
 	// open a file in write mode.
 	std::ofstream out_file;
-	std::string graph;
-	std::string graph_tmp;
+	std::string graph, graph_tmp;
 	out_file.open(file_name);
 	// header
 	out_file << "strict digraph {" << std::endl;
 	out_file << "	rankdir = LR" << std::endl;
 
-	State * start = m_nfsm.m_init;
 	std::vector<State *> current_s;
 	current_s.push_back(start);
 	std::vector<State *> current_s_new;
 	int size = m_s_id/2;
 	while (--size > 0) {
-		for (std::vector<State *>::iterator j = current_s.begin(); j != current_s.end(); j++) {
-			for (std::vector<Transition>::iterator i = (*j)->get_out().begin(); i != (*j)->get_out().end(); i++) {
+		for (auto j = current_s.begin(); j != current_s.end(); j++) {
+			for (auto i = (*j)->get_out().begin(); i != (*j)->get_out().end(); i++) {
 				graph_tmp = "	" + std::to_string((*j)->get_id());
 				graph_tmp += " -> ";
 				if (i->get_to()->is_final())
@@ -1240,6 +1231,7 @@ void NFSM::write_nfsm(std::string file_name) {
 	}
 	out_file << graph << std::endl << "}" <<std::endl;
 	out_file.close();
+	return 0;
 }
 
 bool is_star_plus_quest(char ch) {
@@ -1250,7 +1242,8 @@ bool is_star_plus_quest(char ch) {
 	default: return false;
 	}
 }
-TransType RUN::transition_for_symbol(std::vector<NFSM> * p_nfsms, NFSM * nfsm, char input, bool last_ch, int * n_inval, bool formal) {
+TransType RUN::transition_for_symbol(std::vector<NFSM> * p_nfsms, NFSM * nfsm,
+	char input, bool last_ch, int * n_inval, bool formal) {
 	int n_of_transitions = 0;
 	std::vector<NFSM> NFSMs_tmp;
 	TransType t_type = TransType::INVALID_TRANSITION;
@@ -1318,7 +1311,6 @@ std::string read_subexpr_backwards(std::string::iterator& it, char delimeter) {
 		it--;
 	}
 	str.insert(str.begin(), *it);
-	it--;
 	return str;
 }
 std::string read_subexpr_forwards(std::string::iterator& it, char delimeter) {
@@ -1330,6 +1322,5 @@ std::string read_subexpr_forwards(std::string::iterator& it, char delimeter) {
 		it++;
 	}
 	str += *it;
-	it++;
 	return str;
 }

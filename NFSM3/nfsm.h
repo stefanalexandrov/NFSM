@@ -46,6 +46,16 @@ public:
 	virtual int get_number_of_states() const = 0;
 	virtual ~TransformAlgorithm() {};
 };
+class NFSMSaver {
+public:
+	virtual int save(std::string, State*, int) = 0;
+	virtual ~NFSMSaver() {}
+};
+class Optimizer {
+public:
+	virtual void optimize(State* init, int m_s_id) = 0;
+	virtual ~Optimizer() {}
+};
 
 class NFSM;
 TransType run_lambda();
@@ -81,7 +91,7 @@ public:
 	NFSM& operator=(NFSM&&); //move assignment
 	friend TransformAlgorithm;
 	int construct(TransformAlgorithm&);
-	void write_nfsm(std::string file_name);	
+	int save(NFSMSaver& saver);
 	inline void set_out_wnd(CWnd* wn) { m_output = wn;}
 	inline void set_invalid() {	m_valid = false;}
 	inline bool is_valid() const {	return m_valid;}
@@ -89,7 +99,7 @@ public:
 	inline bool set_constructed(bool val) {m_constructed = val;}
 	inline State* get_current() { return m_current; }
 	inline void set_current(State* st) { m_current = st; }
-	void optimize();
+	void optimize(Optimizer&);
 private:
 	std::shared_ptr<State> m_states; // array of all states
 	State * m_current;
@@ -178,6 +188,18 @@ private:
 	std::string m_regexpr;
 	std::shared_ptr<State> m_states; // array of all states
 };
+class DOTSaver : public NFSMSaver {
+public:
+	int save(std::string, State*, int);
+	~DOTSaver() {}
+};
+
+class SuperflousStatesRemover: public Optimizer {
+public:
+	void optimize(State* init, int m_s_id);
+	~SuperflousStatesRemover() {}
+};
+
 //helper functions
 bool is_meta_char(char ch);
 State * find_initial(std::vector<State> *);

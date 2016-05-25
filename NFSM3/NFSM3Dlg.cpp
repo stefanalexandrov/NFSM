@@ -358,9 +358,8 @@ void CNFSM3Dlg::OnTransform() {
 	Thompsons algorithm(reg_expr_s);
 	m_nfsm.construct(algorithm);
 	if (chb_opt->GetCheck() == BST_CHECKED)
-		m_nfsm.optimize();
-	m_nfsm.write_nfsm("output.txt");
-
+		m_nfsm.optimize(SuperflousStatesRemover());
+	m_nfsm.save(DOTSaver());
 	//enable run button
 	CWnd * wnd_run = GetDlgItem(IDC_BUTTON4);
 	wnd_run->EnableWindow(TRUE);
