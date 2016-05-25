@@ -341,7 +341,7 @@ void CNFSM3Dlg::OnChangeRegExpr() {
 	CWnd * wnd_formal_result = GetDlgItem(IDC_STATIC2);
 	wnd_formal_result->SetWindowTextW(_T("not known"));
 	if (m_nfsm.is_constructed()) {
-		m_nfsm.clean();
+		;
 	}
 	return;
 }
@@ -352,13 +352,15 @@ void CNFSM3Dlg::OnTransform() {
 	CWnd * wnd_progress = GetDlgItem(IDC_PROGCTRL1);
 	CWnd * wnd_transform = GetDlgItem(IDC_BUTTON1);
 	CButton * chb_opt = (CButton *)GetDlgItem(IDC_CHECK2);
-	//m_nfsm = new NFSM(reg_expr_s, wnd_output);
+
 	m_nfsm.set_out_wnd(wnd_output);
-	m_nfsm.set_regexpr(reg_expr_s);
-	m_nfsm.construct();
+	//std::unique_ptr<Thompsons> algorithm(new Thompsons(reg_expr_s));
+	Thompsons algorithm(reg_expr_s);
+	m_nfsm.construct(algorithm);
 	if (chb_opt->GetCheck() == BST_CHECKED)
 		m_nfsm.optimize();
 	m_nfsm.write_nfsm("output.txt");
+
 	//enable run button
 	CWnd * wnd_run = GetDlgItem(IDC_BUTTON4);
 	wnd_run->EnableWindow(TRUE);

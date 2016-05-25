@@ -1,11 +1,18 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <array>
 #include <map>
 #include <fstream>
 #include <iostream>
 #include <set>
 #include <memory>
+
+const int MAX_NUMBER_OF_STATES = 10000;
+const int MAX_NUMBER_OF_NFSM_COPIES = 1000;
+const char LAMBDA_CH = '§'; //character to represent a lambda-transition
+const char BETA_CH = '#'; //character to represent a beta-transition
+						  //(like lambda-transition, but consumes one symbol) for "." metachar
 
 enum class TransType { VALID_TRANSITION, INVALID_TRANSITION, FINAL_STATE, 
 	NON_D_TRANSITION, L_TRANSITION, NOT_FINAL_LAMBDA, FINAL_STATE_LAMBDA, NOT_FINAL, ERROR_ };
@@ -30,9 +37,18 @@ struct reg_decom {
 	std::string::iterator pos;
 };
 
+class TransformAlgorithm {
+public:
+	virtual StateCouple transform() = 0;
+	virtual std::wstring get_log() const = 0;
+	virtual std::shared_ptr<State> get_states() const = 0;
+	virtual int get_number_of_states() const = 0;
+	virtual ~TransformAlgorithm() {};
+};
 
 class NFSM;
 TransType run_lambda();
+
 class RUN {
 public:
 	RUN(NFSM* machine, CWnd* output_wnd);
@@ -43,8 +59,8 @@ public:
 	//RUN& operator=(RUN&&) = delete; //move assignment
 	TransType make_transition(char input, bool last_ch);
 	TransType make_transition(); // for empty string
-	friend TransType run_lambda(RUN * obj, std::vector<NFSM> * p_nfsms, bool last_ch, std::set<int> * visited_s, int * n_invalidated);
-	TransType RUN::transition_for_symbol(std::vector<NFSM> * p_nfsms, NFSM * nfsm, char input, bool last_ch, int * n_inval, bool formal = false);
+	friend TransType run_lambda(RUN*, std::vector<NFSM>*, bool, std::set<int>*, int*);
+	TransType RUN::transition_for_symbol(std::vector<NFSM>*, NFSM*, char, bool, int*, bool formal = false);
 	int formal(int length);
 private:
 	std::vector<NFSM> m_nfsms;
@@ -57,36 +73,14 @@ class State;
 class NFSM {
 public:
 	NFSM();
-	NFSM(std::string regexpr, CWnd * output);
-	virtual ~NFSM(); //should be virtual for shared_ptr
+	virtual ~NFSM() {}; //should be virtual for shared_ptr
 	NFSM(const NFSM&); //copy constructor
 	NFSM& operator=(const NFSM&); //copy assignment
 	NFSM(NFSM&&); //move constructor
 	NFSM& operator=(NFSM&&); //move assignment
-	std::string read_or(std::string::iterator it);
-	std::string read_bracket(std::string::iterator it);
-	int construct();
-	bool match(std::string str);
-	void write_nfsm(std::string file_name);
-	int simulate(int length);
-	StateCouple make_star_NFSM(State * s_init, State * s_final);
-	StateCouple make_plus_NFSM(State * s_init, State * s_final);
-	StateCouple make_question_NFSM(State * s_init, State * s_final);
-	StateCouple make_or_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2);
-	StateCouple make_simple_NFSM(State * s_init, State * s_final);
-	StateCouple make_one_symbol_NFSM(char ch);
-	StateCouple connect_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2);
-	StateCouple make_bracket_NFSM(std::string::iterator i, std::wstring & output_ws, char type);
-	StateCouple copy_nfsm(State * init, State * final_s);
-	StateCouple helper_third_st(std::string left, std::string right);
-	std::wstring third_it_m();
-	std::wstring fourth_it();
-	std::wstring fifth_it();
-	void clean();
-	inline void set_regexpr(std::string st) {
-		m_constructed = false;
-		m_regexpr = st;
-	}
+	friend TransformAlgorithm;
+	int construct(TransformAlgorithm&);
+	void write_nfsm(std::string file_name);	
 	inline void set_out_wnd(CWnd* wn) { m_output = wn;}
 	inline void set_invalid() {	m_valid = false;}
 	inline bool is_valid() const {	return m_valid;}
@@ -96,19 +90,13 @@ public:
 	inline void set_current(State* st) { m_current = st; }
 	void optimize();
 private:
-	SymbolAndNFSMmap m_1_structure;
-	SymbolAndNFSMmapS m_2_structure;
-	SymbolAndNFSMmapS m_3_structure;
-	SymbolAndNFSMmapS m_4_structure;
-	SymbolAndNFSMmapS m_or_structure;
 	std::shared_ptr<State> m_states; // array of all states
 	State * m_current;
 	bool m_constructed;
 	bool m_valid;
-	std::string m_regexpr;
 	CWnd * m_output;
+	StateCouple m_nfsm;
 	int m_s_id;
-	int m_t_id;
 };
 
 class Transition {
@@ -152,6 +140,46 @@ private:
 	bool m_empty;
 };
 
+
+class Thompsons : public TransformAlgorithm {
+public:
+	Thompsons(std::string regexpr);
+	StateCouple transform(); //inteface
+	std::wstring get_log() const { return m_output_ws; }
+	std::shared_ptr<State> get_states() const { return m_states; }
+	int get_number_of_states() const { return m_s_id; }
+	~Thompsons() {}
+private:
+	void first_stage();
+	void second_stage();
+	void third_stage();
+	void fourth_stage();
+	void fifth_stage();
+	void concatenate();
+	StateCouple make_star_NFSM(State*, State*);
+	StateCouple make_plus_NFSM(State*, State*);
+	StateCouple make_question_NFSM(State*, State*);
+	StateCouple make_or_NFSM(State*, State*, State*, State*);
+	StateCouple make_simple_NFSM(State*, State*);
+	StateCouple make_one_symbol_NFSM(char ch);
+	StateCouple connect_NFSM(State*, State*, State*, State*);
+	StateCouple make_bracket_NFSM(std::string::iterator, std::wstring&, char);
+	StateCouple copy_nfsm(State*, State*);
+	std::string read_or(std::string::iterator it);
+	std::string read_bracket(std::string::iterator it);
+	std::vector<reg_decom> symbols;
+	std::vector<reg_decom> meta_symbols;
+	std::wstring m_output_ws;
+	SymbolAndNFSMmap m_1_structure;
+	SymbolAndNFSMmapS m_2_structure;
+	SymbolAndNFSMmapS m_3_structure;
+	SymbolAndNFSMmapS m_4_structure;
+	SymbolAndNFSMmapS m_or_structure;
+	int m_s_id;
+	int m_t_id;
+	std::string m_regexpr;
+	std::shared_ptr<State> m_states; // array of all states
+};
 //helper functions
 
 bool is_meta_char(char ch);

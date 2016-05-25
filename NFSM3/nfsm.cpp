@@ -5,11 +5,7 @@
 #include "DlgProxy.h"
 #include "afxdialogex.h"
 
-const int MAX_NUMBER_OF_STATES = 10000;
-const int MAX_NUMBER_OF_NFSM_COPIES = 1000;
-const char LAMBDA_CH = '§'; //character to represent a lambda-transition
-const char BETA_CH = '#'; //character to represent a beta-transition
-//(like lambda-transition, but consumes one symbol) for "." metachar
+
 
 std::vector<char> METACHAR_ = { '(',')','*','+','?', '|'}; // '.' is not treated as metachar for simplisity
 
@@ -38,7 +34,13 @@ void State::set_transition(int id, char symbol, State * in) {
 	m_out.push_back(Transition(id, symbol, this, in));
 	in->m_in.push_back(Transition(id, symbol, this, in));
 }
-
+Thompsons::Thompsons(std::string regexpr) : m_regexpr(regexpr),
+m_states{ new State[MAX_NUMBER_OF_STATES], std::default_delete<State[]>() }
+{
+	State* states = m_states.get();
+	for (int i = 0; i < MAX_NUMBER_OF_STATES; i++)
+		states[i] = State(); //ititialize array with empty states	
+}
 
 RUN::RUN(NFSM* machine, CWnd* output_wnd) {
 	m_nfsm = machine;
@@ -46,29 +48,17 @@ RUN::RUN(NFSM* machine, CWnd* output_wnd) {
 	m_nfsms.reserve(MAX_NUMBER_OF_NFSM_COPIES);
 	m_output = output_wnd;
 }
-NFSM::NFSM() : m_states{ new State[MAX_NUMBER_OF_STATES], std::default_delete<State[]>() } {
+NFSM::NFSM() : m_states{ nullptr } {
 	m_constructed = false;
-	m_regexpr = "";
-	m_t_id = 0;
-	m_s_id = 0;
-	State* states = m_states.get();
 	m_valid = true;
-	for (int i = 0; i < MAX_NUMBER_OF_STATES; i++)
-		states[i] = State(); //ititialize array with empty states	
 }
 //!!!!!! Many NFSM objects can share the same State array after they are constructed!!!!!! - performance reasons
-NFSM::NFSM(const NFSM& nfsm) :m_1_structure{ nfsm.m_1_structure },
-    m_2_structure{ nfsm.m_2_structure},
-    m_3_structure{ nfsm.m_3_structure },
-	m_4_structure{ nfsm.m_4_structure },
-	m_or_structure{ nfsm.m_or_structure },
+NFSM::NFSM(const NFSM& nfsm) :
     m_states{ nfsm.m_states },
 	m_current{ nullptr },
 	m_constructed{ nfsm.m_constructed },
 	m_valid{ nfsm.m_valid },
-	m_regexpr{ nfsm.m_regexpr },
-	m_output{ nfsm.m_output },
-	m_s_id{ nfsm.m_s_id }, m_t_id{nfsm.m_t_id}
+	m_output{ nfsm.m_output }
 {
 	State* states = m_states.get();
 	State* copy_states = nfsm.m_states.get();
@@ -88,19 +78,11 @@ NFSM::NFSM(const NFSM& nfsm) :m_1_structure{ nfsm.m_1_structure },
 	}
 }
 NFSM& NFSM::operator=(const NFSM& nfsm) {
-	m_1_structure = nfsm.m_1_structure;
-	m_2_structure = nfsm.m_2_structure;
-	m_3_structure = nfsm.m_3_structure;
-	m_4_structure = nfsm.m_4_structure;
-	m_or_structure = nfsm.m_or_structure;
 	m_states = m_states;
 	m_current = nullptr;
 	m_constructed = nfsm.m_constructed;
 	m_valid = nfsm.m_valid;
-	m_regexpr = nfsm.m_regexpr;
 	m_output = nfsm.m_output;
-	m_s_id = nfsm.m_s_id;
-	m_t_id = nfsm.m_t_id;
 	if (!nfsm.m_constructed) { //if nfsm is constructed it does not modify the array pointed to by m_states
 							   // otherwise if m_constructed is false we need to copy the States
 		m_states = std::shared_ptr<State>{ new State[MAX_NUMBER_OF_STATES] };
@@ -116,58 +98,29 @@ NFSM& NFSM::operator=(const NFSM& nfsm) {
 	}
 	return *this;
 }
-NFSM::NFSM(NFSM&& nfsm):m_1_structure{ std::move(nfsm.m_1_structure) },
-    m_2_structure{ std::move(nfsm.m_2_structure) },
-    m_3_structure{ std::move(nfsm.m_3_structure) },
-	m_4_structure{ std::move(nfsm.m_4_structure) },
-	m_or_structure{ std::move(nfsm.m_or_structure) },
+NFSM::NFSM(NFSM&& nfsm):
     m_states{ nfsm.m_states }, //just grab elements without copying
 	m_current{ nfsm.m_current }, m_constructed{ nfsm.m_constructed },
-    m_valid{ nfsm.m_valid }, m_regexpr{ std::move(nfsm.m_regexpr) }, m_output{ nfsm.m_output },
-    m_s_id{ nfsm.m_s_id }, m_t_id{ nfsm.m_t_id }
+    m_valid{ nfsm.m_valid }, m_output{ nfsm.m_output }
 {
 	nfsm.m_states = nullptr;
 	nfsm.m_current = nullptr;
 }
 NFSM& NFSM::operator=(NFSM&& nfsm) {
-	m_2_structure = std::move(nfsm.m_2_structure);
-	m_3_structure = std::move(nfsm.m_3_structure);
-	m_4_structure = std::move(nfsm.m_4_structure);
-	m_or_structure = std::move(nfsm.m_or_structure);
 	m_states = nfsm.m_states; //just grab elements without copying
 	m_current = nfsm.m_current;
 	m_constructed = nfsm.m_constructed;
 	m_valid = nfsm.m_valid;
-	m_regexpr = std::move(nfsm.m_regexpr);
 	m_output = nfsm.m_output;
-	m_s_id = nfsm.m_s_id;
-	m_t_id = nfsm.m_t_id;
 	nfsm.m_states = nullptr;
 	nfsm.m_current = nullptr;
 	return *this;
 }
-NFSM::NFSM(std::string regexpr, CWnd * output): NFSM() {
-	m_regexpr = regexpr;
-	m_output = output;
-}
 
-NFSM::~NFSM() {
-	//delete[] m_states; //shared_ptr is used since many MNFSs created during the bound computation method
-	//and string matching share the m_states array of State objects. This is done for performance reasons
-	//
-}
-
-int NFSM::construct() {
-	m_1_structure.clear();
-	m_2_structure.clear();
-	//first, construct NFSMs for single symbols in the regular expressions
-	// first iteration
-	std::wstring output_ws = read_output_wnd(m_output);
-	output_ws.append(_T("Starting Transformation... \r\n"));
-	output_ws.append(_T(">First iteration: building NFSMs for single characters..."));
+void Thompsons::first_stage() {
+	m_output_ws.append(_T(">First iteration: building NFSMs for single characters..."));
 	//devide regular expression on symbols and metasymbols
-	std::vector<reg_decom> symbols;
-	std::vector<reg_decom> meta_symbols;
+	
 	for (std::string::iterator i = m_regexpr.begin(); i != m_regexpr.end(); ++i) {
 		bool is_meta = true;
 		if (is_meta = is_meta_char(*i)) {
@@ -179,13 +132,16 @@ int NFSM::construct() {
 	for (std::vector<reg_decom>::iterator i = symbols.begin(); i != symbols.end(); ++i) {
 		m_1_structure.insert(SymbolAndNFSMpair(i->ch, make_one_symbol_NFSM(i->ch)));
 	}
-	output_ws.append(_T("Done! Number of NFSMs: "));
+	m_output_ws.append(_T("Done! Number of NFSMs: "));
 	const int N_DIGITS = 10;
 	TCHAR number[N_DIGITS];
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_1_structure.size());
-	output_ws.append(number);
-	//Second iteration
-	output_ws.append(_T(">Second iteration: building NFSMs a single character followed by *, +, ? ... "));
+	m_output_ws.append(number);
+	return;
+}
+
+void Thompsons::second_stage() {
+	m_output_ws.append(_T(">Second iteration: building NFSMs a single character followed by *, +, ? ... "));
 	std::string expr;
 	for (std::vector<reg_decom>::iterator i = meta_symbols.begin(); i != meta_symbols.end(); ++i) {
 		std::string::iterator ch;
@@ -217,167 +173,18 @@ int NFSM::construct() {
 			expr += '?';
 			m_2_structure.insert(SymbolAndNFSMpairS(expr, make_question_NFSM(symbol_nfsm.m_init, symbol_nfsm.m_final)));
 		}
-
 	}
-	output_ws.append(_T("Done! Number of NFSMs: "));
+	const int N_DIGITS = 10;
+	TCHAR number[N_DIGITS];
+	m_output_ws.append(_T("Done! Number of NFSMs: "));
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_2_structure.size());
-	output_ws.append(number);
-	m_output->SetWindowTextW(output_ws.c_str());
-
-	//Third iteration
-	output_ws.append(third_it_m());
-	m_output->SetWindowTextW(output_ws.c_str());
-
-	//output_ws.append(third_it_m());
-	//Fourth iteration
-	output_ws.append(fourth_it());
-
-	//Fifth iteration
-	output_ws.append(fifth_it());
-	
-
-	//Concatenation
-	output_ws.append(_T(">Concatenation... "));
-	bool first_run = true;
-	StateCouple new_nfsm;
-	StateCouple sub_nfsm_1;
-	StateCouple sub_nfsm_2;
-	std::string used_nfsms = "";
-	std::string::iterator begin = m_regexpr.begin();
-	std::string::iterator end = m_regexpr.end();
-	bool end_of_s = false;
-	for (std::string::iterator i = begin; i != end; ++i) {
-		
-		std::string::iterator pos = i;
-		if (i == m_regexpr.end() || ++pos == m_regexpr.end())
-			end_of_s = true;
-		
-
-		std::string tmp = "";
-		if (*i == '%' && first_run == true) {
-			tmp += *i;
-			++i;
-			while (*i != '%' && is_numeric(*i)) {
-				tmp += *i;
-				++i;
-			}
-			tmp += *i;
-			++i;
-			sub_nfsm_1 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
-			if (i == end)
-				break;
-		} else if (*i == '$' && first_run == true ) {
-			tmp += *i;
-			++i;
-			while (*i != '$' && is_numeric(*i)) {
-				tmp += *i;
-					++i;
-			}
-			tmp += *i;
-			++i;
-			sub_nfsm_1 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
-			if (i == end)
-				break;
-		}
-		else if (!end_of_s && is_meta_char(*pos) && first_run == true ) {
-			tmp += *i;
-			tmp += *pos;
-			i = ++pos;
-				sub_nfsm_1 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
-		}
-		else if (first_run == true && pos != m_regexpr.end()) {
-			tmp += *i;
-			sub_nfsm_1 = copy_nfsm(m_1_structure.at(*i).m_init, m_1_structure.at(*i).m_final);
-			++i;
-		}
-		if (i == m_regexpr.end() || pos == m_regexpr.end())
-			end_of_s = true;
-		else if (first_run)
-			++pos;
-		if (pos == m_regexpr.end())
-			end_of_s = true;
-		first_run = false;
-		tmp = "";
-		if (!end_of_s && *i == '%') {
-			tmp += *i;
-			++i;
-			while (*i != '%' && i != m_regexpr.end() && is_numeric(*i)) {
-				tmp += *i;
-				++i;
-			}
-			tmp += *i;
-			sub_nfsm_2 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
-		} else if (!end_of_s && *i == '$') {
-			tmp += *i;
-			++i;
-			while (*i != '$' && i != m_regexpr.end() && is_numeric(*i)) {
-				tmp += *i;
-					++i;
-			}
-			tmp += *i;
-			sub_nfsm_2 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
-		}
-		else if (!end_of_s && is_meta_char(*pos)) {
-			tmp += *i;
-			tmp += *pos;
-			sub_nfsm_2 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
-			i++;
-		}
-		else if (/*!end_of_s &&*/i != m_regexpr.end() && !is_meta_char(*i)) {
-			tmp += *i;
-			sub_nfsm_2 = copy_nfsm(m_1_structure.at(*i).m_init, m_1_structure.at(*i).m_final);
-		}
-		else
-			break;
-		sub_nfsm_1 = connect_NFSM(sub_nfsm_1.m_init, sub_nfsm_1.m_final, sub_nfsm_2.m_init, sub_nfsm_2.m_final);
-	}
-	m_4_structure.insert(SymbolAndNFSMpairS(m_regexpr, sub_nfsm_1));
-	m_current = sub_nfsm_1.m_init;
-	
-	output_ws.append(_T("Done... \r\n "));
-	m_output->SetWindowTextW(output_ws.c_str());
-	m_constructed = true;
-	return 0;
-}
-std::string NFSM::read_or(std::string::iterator it) {
-	std::string expr = "";
-	if (*it == '%') {
-		expr = '%';
-		it--;
-		for (std::string::iterator i = it; i != m_regexpr.begin(); i--) {
-			if (*i != '%') {
-				expr.insert(expr.begin(),*i);
-			}
-			else
-				break;
-		}
-		expr.insert(expr.begin(), '%');
-		return expr;
-	}
-	else
-		return "error";
-}
-std::string NFSM::read_bracket(std::string::iterator it) {
-	std::string expr = "";
-	if (*it == '$') {
-		expr = '$';
-		it--;
-		for (std::string::iterator i = it; i != m_regexpr.begin(); i--) {
-			if (*i != '$') {
-				expr.insert(expr.begin(), *i);
-			}
-		}
-		expr.insert(expr.begin(), '$');
-		return expr;
-	}
-	else
-		return "error";
+	m_output_ws.append(number);
+	return;
 }
 
-std::wstring NFSM::third_it_m() {
-	std::wstring output_ws;
+void Thompsons::third_stage() {
 	bool do_it = true;
-	output_ws.append(_T(">Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... "));
+	m_output_ws.append(_T(">Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... "));
 	while (do_it) {
 		std::string::iterator begin = m_regexpr.begin();
 		std::string::iterator end = m_regexpr.end();
@@ -401,7 +208,7 @@ std::wstring NFSM::third_it_m() {
 					two_after_or++;
 				}
 				if ((two_before_or != end) && (*one_after_or == '(' || *two_before_or == ')' || *one_after_or == '$' || *one_before_or == '$' ||
-					(*one_after_or == '%' && *one_before_or == '%') )) {
+					(*one_after_or == '%' && *one_before_or == '%'))) {
 					continue;
 				}
 				std::string left = "";
@@ -415,7 +222,7 @@ std::wstring NFSM::third_it_m() {
 					(two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != '%') {
 					char c_left = *one_before_or;
 					char c_right = *one_after_or;
-					expr += c_left;
+					expr += c_left; 
 					expr += "|";
 					expr += c_right;
 					nfsm_left = m_1_structure.at(c_left);
@@ -509,34 +316,32 @@ std::wstring NFSM::third_it_m() {
 					//output_ws.append(fourth_it());
 					continue;
 				}
-
 				StateCouple new_nfsm = make_or_NFSM(nfsm_left.m_init, nfsm_left.m_final, nfsm_right.m_init, nfsm_right.m_final);
 				std::string replace = "%" + std::to_string(m_s_id) + "%";
 				std::string tmp_regepxr = m_regexpr.replace(m_regexpr.find(expr), expr.length(), replace);
 				m_regexpr = tmp_regepxr;
 				m_or_structure.insert(SymbolAndNFSMpairS(replace, new_nfsm));
-				output_ws.append(_T("Subexpression being substituted: "));
+				m_output_ws.append(_T("Subexpression being substituted: "));
 				std::wstring ws(expr.begin(), expr.end());
-				output_ws += ws;
-				output_ws.append(_T("\r\n "));
-				output_ws.append(_T("Modified regular expression: "));
+				m_output_ws += ws;
+				m_output_ws.append(_T("\r\n "));
+				m_output_ws.append(_T("Modified regular expression: "));
 				std::wstring ws1(m_regexpr.begin(), m_regexpr.end());
-				output_ws += ws1;
-				output_ws.append(_T("\r\n "));
+				m_output_ws += ws1;
+				m_output_ws.append(_T("\r\n "));
 				break; //break for because after string is modifyed by replace iterators are not guarantied to be valid
 			}
 		}
 	}
 	const int N_DIGITS = 10;
 	TCHAR number[N_DIGITS];
-	output_ws.append(_T("Done! Number of NFSMs: "));
+	m_output_ws.append(_T("Done! Number of NFSMs: "));
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_or_structure.size());
-	output_ws.append(number);
-	return output_ws;
+	m_output_ws.append(number);
+	return;
 }
-std::wstring NFSM::fourth_it() {
-	std::wstring output_ws;
-	output_ws.append(_T(">Fourth iteration: building NFSMs for brackets... "));
+void Thompsons::fourth_stage() {
+	m_output_ws.append(_T(">Fourth iteration: building NFSMs for brackets... "));
 	bool abort = false;
 	bool do_only_simple = false;
 	while (m_regexpr.find(")") != std::string::npos && !abort) {
@@ -555,42 +360,41 @@ std::wstring NFSM::fourth_it() {
 			}
 			if (!do_only_simple && (*i == ')') && (i != m_regexpr.end()) && (*pos == '*')) { // (...)* 
 				if (!abort)
-					make_bracket_NFSM(i, output_ws, '*');
+					make_bracket_NFSM(i, m_output_ws, '*');
 				break;
 			}
 			if (!do_only_simple && (*i == ')') && (i != m_regexpr.end()) && (*pos == '+')) { // (...)+
 				if (!abort)
-					make_bracket_NFSM(i, output_ws, '+');
+					make_bracket_NFSM(i, m_output_ws, '+');
 				break;
 			}
 			if (!do_only_simple && (*i == ')') && (i != m_regexpr.end()) && (*pos == '?')) { // (...)?
 				if (!abort)
-					make_bracket_NFSM(i, output_ws, '?');
+					make_bracket_NFSM(i, m_output_ws, '?');
 				break;
 			}
 			if (do_only_simple || (*i == ')') && (i != m_regexpr.end()) && !is_star_plus_quest(*pos)) { // (...)
 				if (!abort)
-					make_bracket_NFSM(i, output_ws, 'S');
+					make_bracket_NFSM(i, m_output_ws, 'S');
 				break;
 			}
 		}
 	}
 	if (abort) {
-		output_ws.append(fifth_it());
-		output_ws.append(fourth_it());
+		fifth_stage();
+		fourth_stage();
 	}
 	const int N_DIGITS = 10;
 	TCHAR number[N_DIGITS];
-	output_ws.append(_T("Done! Number of NFSMs: "));
+	m_output_ws.append(_T("Done! Number of NFSMs: "));
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_3_structure.size());
-	output_ws.append(number);
-	return output_ws;
+	m_output_ws.append(number);
+	return;
 }
-std::wstring NFSM::fifth_it() {
+void Thompsons::fifth_stage() {
 	int number_of_subcalls = 0;
-	std::wstring output_ws;
-	output_ws.append(_T(">Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... "));
-	output_ws.append(_T("\r\n "));
+	m_output_ws.append(_T(">Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... "));
+	m_output_ws.append(_T("\r\n "));
 	while (m_regexpr.find("|") != std::string::npos) {
 		std::string::iterator begin = m_regexpr.begin();
 		std::string::iterator end = m_regexpr.end();
@@ -702,7 +506,7 @@ std::wstring NFSM::fifth_it() {
 					nfsm_right = m_3_structure.at(right);
 				}
 				// %number%|()metachar
-				else if ((*one_before_or == '%') &&  *one_after_or == '$') {
+				else if ((*one_before_or == '%') && *one_after_or == '$') {
 					left = read_or(one_before_or);
 					right = *one_after_or;
 					one_after_or++;
@@ -717,7 +521,7 @@ std::wstring NFSM::fifth_it() {
 					nfsm_left = m_or_structure.at(left);
 					nfsm_right = m_3_structure.at(right);
 				}// ()metachar|%number%
-				else if ((*one_before_or == '$')  && (*one_after_or == '%')) {
+				else if ((*one_before_or == '$') && (*one_after_or == '%')) {
 					do {
 						one_after_or++;
 					} while (*one_after_or != '%');
@@ -750,17 +554,17 @@ std::wstring NFSM::fifth_it() {
 				else if ((*one_after_or == '(' || *one_before_or == ')') && number_of_subcalls < 100) {
 					number_of_subcalls++;
 					continue;
-				} else if (number_of_subcalls < 100) {
+				}
+				else if (number_of_subcalls < 100) {
 					number_of_subcalls++;
-					output_ws.append(third_it_m());
-					output_ws.append(fourth_it());
-					output_ws.append(third_it_m());
+					third_stage();
+					fourth_stage();
+					third_stage();
 					break;
 				}
 				else {
-					output_ws.append(fourth_it());
+					fourth_stage();
 					number_of_subcalls = 0;
-					//output_ws.append(third_it_m());
 					break;
 				}
 
@@ -769,22 +573,181 @@ std::wstring NFSM::fifth_it() {
 				std::string tmp_regepxr = m_regexpr.replace(m_regexpr.find(expr), expr.length(), replace);
 				m_regexpr = tmp_regepxr;
 				m_or_structure.insert(SymbolAndNFSMpairS(replace, new_nfsm));
-				output_ws.append(_T("Subexpression being substituted: "));
+				m_output_ws.append(_T("Subexpression being substituted: "));
 				std::wstring ws(expr.begin(), expr.end());
-				output_ws += ws;
-				output_ws.append(_T("\r\n "));
-				output_ws.append(_T("Modified regular expression: "));
+				m_output_ws += ws;
+				m_output_ws.append(_T("\r\n "));
+				m_output_ws.append(_T("Modified regular expression: "));
 				std::wstring ws1(m_regexpr.begin(), m_regexpr.end());
-				output_ws += ws1;
-				output_ws.append(_T("\r\n "));
+				m_output_ws += ws1;
+				m_output_ws.append(_T("\r\n "));
 				break;
 			}
 		}
 	}
-	return output_ws;
+	return;
+}
+void Thompsons::concatenate() {
+	m_output_ws.append(_T(">Concatenation... "));
+	bool first_run = true;
+	StateCouple new_nfsm;
+	StateCouple sub_nfsm_1;
+	StateCouple sub_nfsm_2;
+	std::string used_nfsms = "";
+	std::string::iterator begin = m_regexpr.begin();
+	std::string::iterator end = m_regexpr.end();
+	bool end_of_s = false;
+	for (std::string::iterator i = begin; i != end; ++i) {
+
+		std::string::iterator pos = i;
+		if (i == m_regexpr.end() || ++pos == m_regexpr.end())
+			end_of_s = true;
+
+
+		std::string tmp = "";
+		if (*i == '%' && first_run == true) {
+			tmp += *i;
+			++i;
+			while (*i != '%' && is_numeric(*i)) {
+				tmp += *i;
+				++i;
+			}
+			tmp += *i;
+			++i;
+			sub_nfsm_1 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
+			if (i == end)
+				break;
+		}
+		else if (*i == '$' && first_run == true) {
+			tmp += *i;
+			++i;
+			while (*i != '$' && is_numeric(*i)) {
+				tmp += *i;
+				++i;
+			}
+			tmp += *i;
+			++i;
+			sub_nfsm_1 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
+			if (i == end)
+				break;
+		}
+		else if (!end_of_s && is_meta_char(*pos) && first_run == true) {
+			tmp += *i;
+			tmp += *pos;
+			i = ++pos;
+			sub_nfsm_1 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
+		}
+		else if (first_run == true && pos != m_regexpr.end()) {
+			tmp += *i;
+			sub_nfsm_1 = copy_nfsm(m_1_structure.at(*i).m_init, m_1_structure.at(*i).m_final);
+			++i;
+		}
+		if (i == m_regexpr.end() || pos == m_regexpr.end())
+			end_of_s = true;
+		else if (first_run)
+			++pos;
+		if (pos == m_regexpr.end())
+			end_of_s = true;
+		first_run = false;
+		tmp = "";
+		if (!end_of_s && *i == '%') {
+			tmp += *i;
+			++i;
+			while (*i != '%' && i != m_regexpr.end() && is_numeric(*i)) {
+				tmp += *i;
+				++i;
+			}
+			tmp += *i;
+			sub_nfsm_2 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
+		}
+		else if (!end_of_s && *i == '$') {
+			tmp += *i;
+			++i;
+			while (*i != '$' && i != m_regexpr.end() && is_numeric(*i)) {
+				tmp += *i;
+				++i;
+			}
+			tmp += *i;
+			sub_nfsm_2 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
+		}
+		else if (!end_of_s && is_meta_char(*pos)) {
+			tmp += *i;
+			tmp += *pos;
+			sub_nfsm_2 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
+			i++;
+		}
+		else if (/*!end_of_s &&*/i != m_regexpr.end() && !is_meta_char(*i)) {
+			tmp += *i;
+			sub_nfsm_2 = copy_nfsm(m_1_structure.at(*i).m_init, m_1_structure.at(*i).m_final);
+		}
+		else
+			break;
+		sub_nfsm_1 = connect_NFSM(sub_nfsm_1.m_init, sub_nfsm_1.m_final, sub_nfsm_2.m_init, sub_nfsm_2.m_final);
+	}
+	m_4_structure.insert(SymbolAndNFSMpairS(m_regexpr, sub_nfsm_1));
+}
+StateCouple Thompsons::transform() {
+	first_stage();
+	second_stage();
+	third_stage();
+	fourth_stage();
+	fifth_stage();
+	concatenate();
+	return m_4_structure.at(m_regexpr);
 }
 
-StateCouple NFSM::make_or_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2) {
+int NFSM::construct(TransformAlgorithm& algorithm) {
+	std::wstring output_ws = read_output_wnd(m_output);
+	output_ws.append(_T("Starting Transformation... \r\n"));
+		
+	m_nfsm = algorithm.transform();
+	m_current = m_nfsm.m_init;
+	m_states = algorithm.get_states();
+	m_s_id = algorithm.get_number_of_states();
+	output_ws.append(algorithm.get_log());
+	
+	output_ws.append(_T("Done... \r\n "));
+	m_output->SetWindowTextW(output_ws.c_str());
+	m_constructed = true;
+	return 0;
+}
+std::string Thompsons::read_or(std::string::iterator it) {
+	std::string expr = "";
+	if (*it == '%') {
+		expr = '%';
+		it--;
+		for (std::string::iterator i = it; i != m_regexpr.begin(); i--) {
+			if (*i != '%') {
+				expr.insert(expr.begin(),*i);
+			}
+			else
+				break;
+		}
+		expr.insert(expr.begin(), '%');
+		return expr;
+	}
+	else
+		return "error";
+}
+std::string Thompsons::read_bracket(std::string::iterator it) {
+	std::string expr = "";
+	if (*it == '$') {
+		expr = '$';
+		it--;
+		for (std::string::iterator i = it; i != m_regexpr.begin(); i--) {
+			if (*i != '$') {
+				expr.insert(expr.begin(), *i);
+			}
+		}
+		expr.insert(expr.begin(), '$');
+		return expr;
+	}
+	else
+		return "error";
+}
+
+
+StateCouple Thompsons::make_or_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2) {
 	State* states = m_states.get();
 	//copy nfsms
 	StateCouple left = copy_nfsm(s_init_1, s_final_1);
@@ -813,7 +776,7 @@ StateCouple NFSM::make_or_NFSM(State * s_init_1, State * s_final_1, State * s_in
 	return StateCouple(p_a, p_b);
 }
 
-StateCouple NFSM::copy_nfsm(State * init, State * final_s) {
+StateCouple Thompsons::copy_nfsm(State * init, State * final_s) {
 	//first copy initial state
 	State* states = m_states.get();
 	states[m_s_id] = *init;
@@ -878,12 +841,7 @@ StateCouple NFSM::copy_nfsm(State * init, State * final_s) {
 	}
 	return copy;
 }
-bool NFSM::match(std::string str) {
-	return 0;
-}
-int NFSM::simulate(int length) {
-	return 0;
-}
+
 int RUN::formal(int length) { //compute bounds on number of NFSM copies
 	int max_n = 0; // maximum number of copies
 	std::vector<std::vector<NFSM>> runs;
@@ -1113,7 +1071,7 @@ State * find_final(std::vector<State> * s) {
 			return &(*i);
 }
 
-StateCouple NFSM::make_star_NFSM(State * s_init, State * s_final) {
+StateCouple Thompsons::make_star_NFSM(State * s_init, State * s_final) {
 	State* states = m_states.get();
 	//copy nfsm
 	StateCouple copy = copy_nfsm(s_init, s_final);
@@ -1138,7 +1096,7 @@ StateCouple NFSM::make_star_NFSM(State * s_init, State * s_final) {
 
 	return StateCouple(p_a, p_b);
 }
-StateCouple NFSM::make_plus_NFSM(State * s_init, State * s_final) {
+StateCouple Thompsons::make_plus_NFSM(State * s_init, State * s_final) {
 	State* states = m_states.get();
 	//copy nfsm
 	StateCouple copy = copy_nfsm(s_init, s_final);
@@ -1161,12 +1119,12 @@ StateCouple NFSM::make_plus_NFSM(State * s_init, State * s_final) {
 	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, copy.m_init);
 	return StateCouple(p_a, p_b);
 }
-StateCouple NFSM::make_simple_NFSM(State * s_init, State * s_final) {
+StateCouple Thompsons::make_simple_NFSM(State * s_init, State * s_final) {
 	//copy nfsm
 	StateCouple copy = copy_nfsm(s_init, s_final);
 	return copy;
 }
-StateCouple NFSM::make_question_NFSM(State * s_init, State * s_final) {
+StateCouple Thompsons::make_question_NFSM(State * s_init, State * s_final) {
 	State* states = m_states.get();
 	//copy nfsm
 	StateCouple copy = copy_nfsm(s_init, s_final);
@@ -1189,7 +1147,7 @@ StateCouple NFSM::make_question_NFSM(State * s_init, State * s_final) {
 	copy.m_final->set_transition(m_t_id++, LAMBDA_CH, p_b);
 	return StateCouple(p_a, p_b);
 }
-StateCouple NFSM::make_one_symbol_NFSM(char ch) {
+StateCouple Thompsons::make_one_symbol_NFSM(char ch) {
 	State* states = m_states.get();
 	states[m_s_id] = State(m_s_id);
 	State * p_a = &(states[m_s_id]);
@@ -1206,7 +1164,7 @@ StateCouple NFSM::make_one_symbol_NFSM(char ch) {
 		p_a->set_transition(m_t_id++, ch, p_b);
 	return StateCouple(p_a, p_b);
 }
-StateCouple NFSM::connect_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2) {
+StateCouple Thompsons::connect_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2) {
 	s_final_1->set_final(false);
 	s_final_1->set_transition(m_t_id++, LAMBDA_CH, s_init_2);
 	s_init_2->set_initial(false);
@@ -1214,7 +1172,7 @@ StateCouple NFSM::connect_NFSM(State * s_init_1, State * s_final_1, State * s_in
 	return StateCouple(s_init_1, s_final_2);
 }
 
-StateCouple NFSM::make_bracket_NFSM(std::string::iterator i, std::wstring & output_ws, char type) {
+StateCouple Thompsons::make_bracket_NFSM(std::string::iterator i, std::wstring & output_ws, char type) {
 	std::string sub_expr = "";
 	std::string tmp = "";
 	
@@ -1350,8 +1308,7 @@ StateCouple NFSM::make_bracket_NFSM(std::string::iterator i, std::wstring & outp
 
 void NFSM::optimize() {
 	State* states = m_states.get();
-	StateCouple tmp = m_4_structure.at(m_regexpr);
-	int start_id = tmp.m_init->get_id();
+	int start_id = m_nfsm.m_init->get_id();
 
 	int num = 5;
 	while (num--) {
@@ -1467,7 +1424,7 @@ void NFSM::write_nfsm(std::string file_name) {
 	out_file << "strict digraph {" << std::endl;
 	out_file << "	rankdir = LR" << std::endl;
 
-	State * start = m_4_structure.at(m_regexpr).m_init;
+	State * start = m_nfsm.m_init;
 	std::vector<State *> current_s;
 	current_s.push_back(start);
 	std::vector<State *> current_s_new;
@@ -1571,15 +1528,4 @@ std::wstring read_output_wnd(CWnd * wnd) {
 	delete[] output;
 	return output_ws;
 }
-void NFSM::clean() {
-	m_1_structure.clear();
-	m_2_structure.clear();
-	m_3_structure.clear();
-	m_4_structure.clear();
-	m_or_structure.clear();
-	m_current = nullptr;
-	m_constructed = false;
-	m_regexpr = "";
-	m_s_id = 0;
-	m_t_id = 0;
-}
+
