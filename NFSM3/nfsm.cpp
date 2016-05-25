@@ -52,56 +52,27 @@ NFSM::NFSM() : m_states{ nullptr } {
 	m_constructed = false;
 	m_valid = true;
 }
-//!!!!!! Many NFSM objects can share the same State array after they are constructed!!!!!! - performance reasons
 NFSM::NFSM(const NFSM& nfsm) :
     m_states{ nfsm.m_states },
-	m_current{ nullptr },
+	m_current{ nfsm.m_current },
 	m_constructed{ nfsm.m_constructed },
 	m_valid{ nfsm.m_valid },
-	m_output{ nfsm.m_output }
-{
-	State* states = m_states.get();
-	State* copy_states = nfsm.m_states.get();
-	if (!nfsm.m_constructed) { 
-		//if nfsm is constructed it does not modify the array pointed to by m_states
-		// otherwise if m_constructed is false we need to copy the States
-		m_states = std::shared_ptr<State>{ new State[MAX_NUMBER_OF_STATES] };
-		int id = nfsm.m_current->get_id();
-		for (int i = 0; i < MAX_NUMBER_OF_STATES; i++) {
-			states[i] = copy_states[i];
-			if (states[i].get_id() == id)
-				m_current = &states[i];
-		}
-	}
-	else {
-		m_current = nfsm.m_current;
-	}
-}
+	m_output{ nfsm.m_output },
+	m_s_id{ nfsm.m_s_id }
+{}
 NFSM& NFSM::operator=(const NFSM& nfsm) {
 	m_states = m_states;
-	m_current = nullptr;
+	m_current = nfsm.m_current;
 	m_constructed = nfsm.m_constructed;
 	m_valid = nfsm.m_valid;
 	m_output = nfsm.m_output;
-	if (!nfsm.m_constructed) { //if nfsm is constructed it does not modify the array pointed to by m_states
-							   // otherwise if m_constructed is false we need to copy the States
-		m_states = std::shared_ptr<State>{ new State[MAX_NUMBER_OF_STATES] };
-		int id = nfsm.m_current->get_id();
-		for (int i = 0; i < MAX_NUMBER_OF_STATES; i++) {
-			m_states.get()[i] = nfsm.m_states.get()[i];
-			if (m_states.get()[i].get_id() == id)
-				m_current = &m_states.get()[i];
-		}
-	}
-	else {
-		m_current = nfsm.m_current;
-	}
+	m_s_id = nfsm.m_s_id; 
 	return *this;
 }
 NFSM::NFSM(NFSM&& nfsm):
     m_states{ nfsm.m_states }, //just grab elements without copying
 	m_current{ nfsm.m_current }, m_constructed{ nfsm.m_constructed },
-    m_valid{ nfsm.m_valid }, m_output{ nfsm.m_output }
+    m_valid{ nfsm.m_valid }, m_output{ nfsm.m_output }, m_s_id{ nfsm.m_s_id }
 {
 	nfsm.m_states = nullptr;
 	nfsm.m_current = nullptr;
@@ -114,13 +85,12 @@ NFSM& NFSM::operator=(NFSM&& nfsm) {
 	m_output = nfsm.m_output;
 	nfsm.m_states = nullptr;
 	nfsm.m_current = nullptr;
+	m_s_id = nfsm.m_s_id;
 	return *this;
 }
-
 void Thompsons::first_stage() {
 	m_output_ws.append(_T(">First iteration: building NFSMs for single characters..."));
 	//devide regular expression on symbols and metasymbols
-	
 	for (std::string::iterator i = m_regexpr.begin(); i != m_regexpr.end(); ++i) {
 		bool is_meta = true;
 		if (is_meta = is_meta_char(*i)) {
@@ -139,7 +109,6 @@ void Thompsons::first_stage() {
 	m_output_ws.append(number);
 	return;
 }
-
 void Thompsons::second_stage() {
 	m_output_ws.append(_T(">Second iteration: building NFSMs a single character followed by *, +, ? ... "));
 	std::string expr;
@@ -207,108 +176,85 @@ void Thompsons::third_stage() {
 					two_after_or = one_after_or;
 					two_after_or++;
 				}
-				if ((two_before_or != end) && (*one_after_or == '(' || *two_before_or == ')' || *one_after_or == '$' || *one_before_or == '$' ||
-					(*one_after_or == '%' && *one_before_or == '%'))) {
+				if ((two_before_or != end) && (*one_after_or == '(' || *two_before_or == ')' || *one_after_or == BRACKET_DELIM || *one_before_or == BRACKET_DELIM ||
+					(*one_after_or == OR_DELIM && *one_before_or == OR_DELIM))) {
 					continue;
 				}
 				std::string left = "";
 				std::string right = "";
 				std::string expr = "";
-				StateCouple nfsm_left;
-				StateCouple nfsm_right;
+				StateCouple nfsm_left, nfsm_right;
 
 				// <symbol>|<symbol>
-				if (!is_meta_char(*one_before_or) && (*one_before_or != '%') && !is_meta_char(*one_after_or) &&
-					(two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != '%') {
+				if (!is_meta_char(*one_before_or) && (*one_before_or != OR_DELIM) && !is_meta_char(*one_after_or) &&
+					(two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != OR_DELIM) {
 					char c_left = *one_before_or;
 					char c_right = *one_after_or;
-					expr += c_left; 
-					expr += "|";
-					expr += c_right;
+					expr += c_left; expr += "|"; expr += c_right;
 					nfsm_left = m_1_structure.at(c_left);
 					nfsm_right = m_1_structure.at(c_right);
 
 				} // <symbol>metachar|<symbol>
-				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != '%') && *two_before_or != ')'&&
-					!is_meta_char(*one_after_or) && (two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != '%') {
+				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != OR_DELIM) && *two_before_or != ')'&&
+					!is_meta_char(*one_after_or) && (two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != OR_DELIM) {
 					left = *two_before_or;
 					left += *one_before_or;
 					char c_right = *one_after_or;
-					expr += left;
-					expr += "|";
-					expr += c_right;
+					expr += left; expr += "|"; expr += c_right;
 					nfsm_left = m_2_structure.at(left);
 					nfsm_right = m_1_structure.at(c_right);
 				}// <symbol>|<symbol>metachar
-				else if (!is_meta_char(*one_before_or) && (*one_before_or != '%') && *one_before_or != '$' &&
-					(two_after_or == end || is_star_plus_quest(*two_after_or)) && *one_after_or != '%') {
+				else if (!is_meta_char(*one_before_or) && (*one_before_or != OR_DELIM) && *one_before_or != BRACKET_DELIM &&
+					(two_after_or == end || is_star_plus_quest(*two_after_or)) && *one_after_or != OR_DELIM) {
 					right = *one_after_or;
 					right += *two_after_or;
 					char c_left = *one_before_or;
-					expr += c_left;
-					expr += "|";
-					expr += right;
+					expr += c_left; expr += "|"; expr += right;
 					nfsm_left = m_1_structure.at(c_left);
 					nfsm_right = m_2_structure.at(right);
 				}
 				// <symbol>metachar|<symbol>metachar
-				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != '%') &&
-					(two_after_or != end && is_star_plus_quest(*two_after_or)) && *one_after_or != '%') {
+				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != OR_DELIM) &&
+					(two_after_or != end && is_star_plus_quest(*two_after_or)) && *one_after_or != OR_DELIM) {
 					right = *one_after_or;
 					right += *two_after_or;
 					left = *two_before_or;
 					left += *one_before_or;
-					expr += left;
-					expr += "|";
-					expr += right;
+					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_2_structure.at(left);
 					nfsm_right = m_2_structure.at(right);
 				}
 				// %number%|<symbol>metachar 
-				else if ((*one_before_or == '%') && (two_after_or != end && is_star_plus_quest(*two_after_or))
-					&& *one_after_or != '%') {
+				else if ((*one_before_or == OR_DELIM) && (two_after_or != end && is_star_plus_quest(*two_after_or))
+					&& *one_after_or != OR_DELIM) {
 					right = *one_after_or;
 					right += *two_after_or;
-					left = read_or(one_before_or);
-					expr += left;
-					expr += "|";
-					expr += right;
+					left = read_subexpr_backwards(one_before_or, OR_DELIM);
+					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_or_structure.at(left);
 					nfsm_right = m_2_structure.at(right);
 				}
 				// %number%|<symbol>
-				else if ((*one_before_or == '%') && !is_meta_char(*one_after_or) &&
-					(two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != '%') {
-					left = read_or(one_before_or);
+				else if ((*one_before_or == OR_DELIM) && !is_meta_char(*one_after_or) &&
+					(two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != OR_DELIM) {
+					left = read_subexpr_backwards(one_before_or, OR_DELIM);
 					char c_right = *one_after_or;
-					expr += left;
-					expr += "|";
-					expr += c_right;
+					expr += left; expr += "|"; expr += c_right;
 					nfsm_left = m_or_structure.at(left);
 					nfsm_right = m_1_structure.at(c_right);
 				} // <symbol>|%number%
-				else if (!is_meta_char(*one_before_or) && (*one_before_or != '%') && (*one_after_or == '%')) {
-					do {
-						one_after_or++;
-					} while (*one_after_or != '%');
-					right = read_or(one_after_or);
+				else if (!is_meta_char(*one_before_or) && (*one_before_or != OR_DELIM) && (*one_after_or == OR_DELIM)) {
+					right = read_subexpr_forwards(one_after_or, OR_DELIM);
 					char c_left = *one_before_or;
-					expr += c_left;
-					expr += "|";
-					expr += right;
+					expr += c_left; expr += "|"; expr += right;
 					nfsm_left = m_1_structure.at(c_left);
 					nfsm_right = m_or_structure.at(right);
 				} // <symbol>metachar|%number%
-				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != '%') && (*one_after_or == '%')) {
-					do {
-						one_after_or++;
-					} while (*one_after_or != '%');
-					right = read_or(one_after_or);
+				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != OR_DELIM) && (*one_after_or == OR_DELIM)) {
+					right = read_subexpr_forwards(one_after_or, OR_DELIM);
 					left = *two_before_or;
 					left += *one_before_or;
-					expr += left;
-					expr += "|";
-					expr += right;
+					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_2_structure.at(left);
 					nfsm_right = m_or_structure.at(right);
 				}
@@ -317,6 +263,7 @@ void Thompsons::third_stage() {
 					continue;
 				}
 				StateCouple new_nfsm = make_or_NFSM(nfsm_left.m_init, nfsm_left.m_final, nfsm_right.m_init, nfsm_right.m_final);
+
 				std::string replace = "%" + std::to_string(m_s_id) + "%";
 				std::string tmp_regepxr = m_regexpr.replace(m_regexpr.find(expr), expr.length(), replace);
 				m_regexpr = tmp_regepxr;
@@ -418,136 +365,65 @@ void Thompsons::fifth_stage() {
 				std::string left = "";
 				std::string right = "";
 				std::string expr = "";
-				StateCouple nfsm_left;
-				StateCouple nfsm_right;
+				StateCouple nfsm_left, nfsm_right;
 
 				// ()metachar|<symbol>
-				if ((*one_before_or == '$') && (*one_after_or != '$') && (*one_after_or != '%') && (*one_after_or != '(') && (two_after_or == end || !is_meta_char_nb(*two_after_or))) {
+				if ((*one_before_or == BRACKET_DELIM) && (*one_after_or != BRACKET_DELIM) && (*one_after_or != OR_DELIM) && (*one_after_or != '(') && (two_after_or == end || !is_meta_char_nb(*two_after_or))) {
 					char c_right = *one_after_or;
-					left = *one_before_or;
-					one_before_or--;
-					while (*one_before_or != '$' && is_numeric(*one_before_or)) {
-						left.insert(left.begin(), *one_before_or);
-						one_before_or--;
-					}
-					left.insert(left.begin(), *one_before_or);
-					expr += left;
-					expr += "|";
-					expr += c_right;
+					left = read_subexpr_backwards(one_before_or, BRACKET_DELIM);
+					expr += left; expr += "|"; expr += c_right;
 					nfsm_left = m_3_structure.at(left);
 					nfsm_right = m_1_structure.at(c_right);
 				} // ()metachar|<symbol>metachar
-				else if ((*one_before_or == '$') && (*one_after_or != '$') && (*one_after_or != '%') && (*one_after_or != '(') && (two_after_or != end && is_meta_char_nb(*two_after_or))) {
+				else if ((*one_before_or == BRACKET_DELIM) && (*one_after_or != BRACKET_DELIM) && (*one_after_or != OR_DELIM) && (*one_after_or != '(') && (two_after_or != end && is_meta_char_nb(*two_after_or))) {
 					right = *one_after_or;
 					right += *two_after_or;
-					left = *one_before_or;
-					one_before_or--;
-					while (*one_before_or != '$' && is_numeric(*one_before_or)) {
-						left.insert(left.begin(), *one_before_or);
-						one_before_or--;
-					}
-					left.insert(left.begin(), *one_before_or);
-					expr += left;
-					expr += "|";
-					expr += right;
+					left = read_subexpr_backwards(one_before_or, BRACKET_DELIM);
+					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_3_structure.at(left);
 					nfsm_right = m_2_structure.at(right);
 				} // ()metachar|()metachar
-				else if (*one_before_or == '$' && *one_after_or == '$') {
-					left = *one_before_or;
-					one_before_or--;
-					while (*one_before_or != '$' && is_numeric(*one_before_or)) {
-						left.insert(left.begin(), *one_before_or);
-						one_before_or--;
-					}
-					left.insert(left.begin(), *one_before_or);
-					right = *one_after_or;
-					one_after_or++;
-					while (*one_after_or != '$' && is_numeric(*one_after_or)) {
-						right += *one_after_or;
-						one_after_or++;
-					}
-					right += *one_after_or;
-					expr += left;
-					expr += "|";
-					expr += right;
+				else if (*one_before_or == BRACKET_DELIM && *one_after_or == BRACKET_DELIM) {
+					left = read_subexpr_backwards(one_before_or, BRACKET_DELIM);
+					right = read_subexpr_forwards(one_after_or, BRACKET_DELIM);
+					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_3_structure.at(left);
 					nfsm_right = m_3_structure.at(right);
 				} // <symbol>|()metachar
-				else if ((*one_before_or != '$') && (*one_before_or != '%') && (*one_before_or != ')') && !is_meta_char(*one_before_or) && *one_after_or == '$') {
+				else if ((*one_before_or != BRACKET_DELIM) && (*one_before_or != OR_DELIM) && (*one_before_or != ')') && !is_meta_char(*one_before_or) && *one_after_or == BRACKET_DELIM) {
 					char c_left = *one_before_or;
-					right = *one_after_or;
-					one_after_or++;
-					while (*one_after_or != '$' && is_numeric(*one_after_or)) {
-						right += *one_after_or;
-						one_after_or++;
-					}
-					right += *one_after_or;
-					expr += c_left;
-					expr += "|";
-					expr += right;
+					right = read_subexpr_forwards(one_after_or, BRACKET_DELIM);
+					expr += c_left; expr += "|"; expr += right;
 					nfsm_left = m_1_structure.at(c_left);
 					nfsm_right = m_3_structure.at(right);
 				} // <symbol>metachar|()metachar
-				else if ((*one_before_or != '$') && (*one_before_or != '%') && (*one_before_or != ')') && is_meta_char(*one_before_or) && *one_after_or == '$') {
+				else if ((*one_before_or != BRACKET_DELIM) && (*one_before_or != OR_DELIM) && (*one_before_or != ')') && is_meta_char(*one_before_or) && *one_after_or == BRACKET_DELIM) {
 					left = *two_before_or;
 					left += *one_before_or;
-					right = *one_after_or;
-					one_after_or++;
-					while (*one_after_or != '$' && is_numeric(*one_after_or)) {
-						right += *one_after_or;
-						one_after_or++;
-					}
-					right += *one_after_or;
-					expr += left;
-					expr += "|";
-					expr += right;
+					right = read_subexpr_forwards(one_after_or, BRACKET_DELIM);
+					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_2_structure.at(left);
 					nfsm_right = m_3_structure.at(right);
 				}
 				// %number%|()metachar
-				else if ((*one_before_or == '%') && *one_after_or == '$') {
-					left = read_or(one_before_or);
-					right = *one_after_or;
-					one_after_or++;
-					while (*one_after_or != '$' && is_numeric(*one_after_or)) {
-						right += *one_after_or;
-						one_after_or++;
-					}
-					right += *one_after_or;
-					expr += left;
-					expr += "|";
-					expr += right;
+				else if ((*one_before_or == OR_DELIM) && *one_after_or == BRACKET_DELIM) {
+					left = read_subexpr_backwards(one_before_or, OR_DELIM);
+					right = read_subexpr_forwards(one_after_or, BRACKET_DELIM);
+					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_or_structure.at(left);
 					nfsm_right = m_3_structure.at(right);
 				}// ()metachar|%number%
-				else if ((*one_before_or == '$') && (*one_after_or == '%')) {
-					do {
-						one_after_or++;
-					} while (*one_after_or != '%');
-					right = read_or(one_after_or);
-					left = *one_before_or;
-					one_before_or--;
-					while (*one_before_or != '$' && is_numeric(*one_before_or)) {
-						left.insert(left.begin(), *one_before_or);
-						one_before_or--;
-					}
-					left.insert(left.begin(), *one_before_or);
-					expr += left;
-					expr += "|";
-					expr += right;
+				else if ((*one_before_or == BRACKET_DELIM) && (*one_after_or == OR_DELIM)) {
+					right = read_subexpr_forwards(one_after_or, OR_DELIM);
+					left = read_subexpr_backwards(one_before_or, BRACKET_DELIM);
+					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_3_structure.at(left);
 					nfsm_right = m_or_structure.at(right);
 				} // %number%|%number%
-				else if ((*one_before_or == '%') && (*one_after_or == '%')) {
-					do {
-						one_after_or++;
-					} while (*one_after_or != '%');
-					right = read_or(one_after_or);
-					left = read_or(one_before_or);
-					expr += left;
-					expr += "|";
-					expr += right;
+				else if ((*one_before_or == OR_DELIM) && (*one_after_or == OR_DELIM)) {
+					right = read_subexpr_forwards(one_after_or, OR_DELIM);
+					left = read_subexpr_backwards(one_before_or, OR_DELIM);
+					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_or_structure.at(left);
 					nfsm_right = m_or_structure.at(right);
 				}
@@ -567,8 +443,8 @@ void Thompsons::fifth_stage() {
 					number_of_subcalls = 0;
 					break;
 				}
-
 				StateCouple new_nfsm = make_or_NFSM(nfsm_left.m_init, nfsm_left.m_final, nfsm_right.m_init, nfsm_right.m_final);
+
 				std::string replace = "%" + std::to_string(m_s_id) + "%";
 				std::string tmp_regepxr = m_regexpr.replace(m_regexpr.find(expr), expr.length(), replace);
 				m_regexpr = tmp_regepxr;
@@ -603,30 +479,15 @@ void Thompsons::concatenate() {
 		if (i == m_regexpr.end() || ++pos == m_regexpr.end())
 			end_of_s = true;
 
-
 		std::string tmp = "";
-		if (*i == '%' && first_run == true) {
-			tmp += *i;
-			++i;
-			while (*i != '%' && is_numeric(*i)) {
-				tmp += *i;
-				++i;
-			}
-			tmp += *i;
-			++i;
+		if (*i == OR_DELIM && first_run == true) {
+			tmp += read_subexpr_forwards(i , OR_DELIM);
 			sub_nfsm_1 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
 			if (i == end)
 				break;
 		}
-		else if (*i == '$' && first_run == true) {
-			tmp += *i;
-			++i;
-			while (*i != '$' && is_numeric(*i)) {
-				tmp += *i;
-				++i;
-			}
-			tmp += *i;
-			++i;
+		else if (*i == BRACKET_DELIM && first_run == true) {
+			tmp += read_subexpr_forwards(i, BRACKET_DELIM);
 			sub_nfsm_1 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
 			if (i == end)
 				break;
@@ -650,24 +511,14 @@ void Thompsons::concatenate() {
 			end_of_s = true;
 		first_run = false;
 		tmp = "";
-		if (!end_of_s && *i == '%') {
-			tmp += *i;
-			++i;
-			while (*i != '%' && i != m_regexpr.end() && is_numeric(*i)) {
-				tmp += *i;
-				++i;
-			}
-			tmp += *i;
+		if (!end_of_s && *i == OR_DELIM) {
+			tmp += read_subexpr_forwards(i, OR_DELIM);
+			i--;
 			sub_nfsm_2 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
 		}
-		else if (!end_of_s && *i == '$') {
-			tmp += *i;
-			++i;
-			while (*i != '$' && i != m_regexpr.end() && is_numeric(*i)) {
-				tmp += *i;
-				++i;
-			}
-			tmp += *i;
+		else if (!end_of_s && *i == BRACKET_DELIM) {
+			tmp += read_subexpr_forwards(i, BRACKET_DELIM);
+			i--;
 			sub_nfsm_2 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
 		}
 		else if (!end_of_s && is_meta_char(*pos)) {
@@ -711,42 +562,6 @@ int NFSM::construct(TransformAlgorithm& algorithm) {
 	m_constructed = true;
 	return 0;
 }
-std::string Thompsons::read_or(std::string::iterator it) {
-	std::string expr = "";
-	if (*it == '%') {
-		expr = '%';
-		it--;
-		for (std::string::iterator i = it; i != m_regexpr.begin(); i--) {
-			if (*i != '%') {
-				expr.insert(expr.begin(),*i);
-			}
-			else
-				break;
-		}
-		expr.insert(expr.begin(), '%');
-		return expr;
-	}
-	else
-		return "error";
-}
-std::string Thompsons::read_bracket(std::string::iterator it) {
-	std::string expr = "";
-	if (*it == '$') {
-		expr = '$';
-		it--;
-		for (std::string::iterator i = it; i != m_regexpr.begin(); i--) {
-			if (*i != '$') {
-				expr.insert(expr.begin(), *i);
-			}
-		}
-		expr.insert(expr.begin(), '$');
-		return expr;
-	}
-	else
-		return "error";
-}
-
-
 StateCouple Thompsons::make_or_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2) {
 	State* states = m_states.get();
 	//copy nfsms
@@ -837,7 +652,6 @@ StateCouple Thompsons::copy_nfsm(State * init, State * final_s) {
 		
 		current = current_new;
 		current_new.clear();
-		
 	}
 	return copy;
 }
@@ -857,8 +671,6 @@ int RUN::formal(int length) { //compute bounds on number of NFSM copies
 	while (runs.size() > 0) {
 		
 		for (std::vector<std::vector<NFSM>>::iterator tt = runs.begin(); tt != runs.end(); tt++) {
-			// tmp.insert(tmp.end(), tt->begin(), tt->end());
-
 
 			run_lambda(NULL, &(*tt), false, &visited_states, &n_invalidated); // first stage: perform all possible §-transitions
 			// lambda-transitions are creators of the copies
@@ -1195,27 +1007,13 @@ StateCouple Thompsons::make_bracket_NFSM(std::string::iterator i, std::wstring &
 				sub_nfsm_1 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
 				j = --prev_pos;
 			}
-			else if (*j == '%' && is_numeric(*(--j))) {
-				std::string tmp_2 = "";
-				tmp_2.insert(tmp_2.begin(), '%');
-				while (*j != '%') {
-					tmp_2.insert(tmp_2.begin(), *j);
-					--j;
-				}
-				tmp_2.insert(tmp_2.begin(), *j);
-				--j;
+			else if (*j == OR_DELIM && is_numeric(*(--j))) {
+				std::string tmp_2 = read_subexpr_backwards(++j, OR_DELIM);
 				sub_nfsm_1 = copy_nfsm(m_or_structure.at(tmp_2).m_init, m_or_structure.at(tmp_2).m_final);
 				sub_expr = tmp_2 + sub_expr;
 			}
-			else if (*j == '$' && is_numeric(*(--j))) {
-				std::string tmp_2 = "";
-				tmp_2.insert(tmp_2.begin(), '$');
-				while (*j != '$') {
-					tmp_2.insert(tmp_2.begin(), *j);
-					--j;
-				}
-				tmp_2.insert(tmp_2.begin(), *j);
-				--j;
+			else if (*j == BRACKET_DELIM && is_numeric(*(--j))) {
+				std::string tmp_2 = read_subexpr_backwards(++j, BRACKET_DELIM);
 				sub_nfsm_1 = copy_nfsm(m_3_structure.at(tmp_2).m_init, m_3_structure.at(tmp_2).m_final);
 				sub_expr = tmp_2 + sub_expr;
 			}
@@ -1238,27 +1036,15 @@ StateCouple Thompsons::make_bracket_NFSM(std::string::iterator i, std::wstring &
 				sub_nfsm_2 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
 				j = prev_pos;
 			}
-			else if (*j == '%' && is_numeric(*(--j))) {
-				std::string tmp_2 = "";
-				tmp_2.insert(tmp_2.begin(), '%');
-				while (*j != '%') {
-					//inside just numbers
-					tmp_2.insert(tmp_2.begin(), *j);
-					--j;
-				}
-				tmp_2.insert(tmp_2.begin(), *j);
+			else if (*j == OR_DELIM && is_numeric(*(--j))) {
+				std::string tmp_2 = read_subexpr_backwards(++j, OR_DELIM);
+				j++;
 				sub_nfsm_2 = copy_nfsm(m_or_structure.at(tmp_2).m_init, m_or_structure.at(tmp_2).m_final);
 				sub_expr = tmp_2 + sub_expr;
 			}
-			else if (*j == '$' && is_numeric(*(--j))) {
-				std::string tmp_2 = "";
-				tmp_2.insert(tmp_2.begin(), '$');
-				while (*j != '$') {
-					//inside just numbers
-					tmp_2.insert(tmp_2.begin(), *j);
-					--j;
-				}
-				tmp_2.insert(tmp_2.begin(), *j);
+			else if (*j == BRACKET_DELIM && is_numeric(*(--j))) {
+				std::string tmp_2 = read_subexpr_backwards(++j, BRACKET_DELIM);
+				j++;
 				sub_nfsm_2 = copy_nfsm(m_3_structure.at(tmp_2).m_init, m_3_structure.at(tmp_2).m_final);
 				sub_expr = tmp_2 + sub_expr;
 			}
@@ -1419,7 +1205,6 @@ void NFSM::write_nfsm(std::string file_name) {
 	std::string graph;
 	std::string graph_tmp;
 	out_file.open(file_name);
-
 	// header
 	out_file << "strict digraph {" << std::endl;
 	out_file << "	rankdir = LR" << std::endl;
@@ -1453,10 +1238,7 @@ void NFSM::write_nfsm(std::string file_name) {
 		current_s = current_s_new;
 		current_s_new.clear();
 	}
-	out_file << graph << std::endl;
-	out_file <<  std::endl;
-	out_file << "}"<<std::endl;
-	// close the opened file.
+	out_file << graph << std::endl << "}" <<std::endl;
 	out_file.close();
 }
 
@@ -1468,7 +1250,6 @@ bool is_star_plus_quest(char ch) {
 	default: return false;
 	}
 }
-
 TransType RUN::transition_for_symbol(std::vector<NFSM> * p_nfsms, NFSM * nfsm, char input, bool last_ch, int * n_inval, bool formal) {
 	int n_of_transitions = 0;
 	std::vector<NFSM> NFSMs_tmp;
@@ -1528,4 +1309,27 @@ std::wstring read_output_wnd(CWnd * wnd) {
 	delete[] output;
 	return output_ws;
 }
-
+std::string read_subexpr_backwards(std::string::iterator& it, char delimeter) {
+	std::string str = "";
+	str = *it;
+	it--;
+	while (*it != delimeter && is_numeric(*it)) {
+		str.insert(str.begin(), *it);
+		it--;
+	}
+	str.insert(str.begin(), *it);
+	it--;
+	return str;
+}
+std::string read_subexpr_forwards(std::string::iterator& it, char delimeter) {
+	std::string str = "";
+	str = *it;
+	it++;
+	while (*it != delimeter && is_numeric(*it)) {
+		str += *it;
+		it++;
+	}
+	str += *it;
+	it++;
+	return str;
+}

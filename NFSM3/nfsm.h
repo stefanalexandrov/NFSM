@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include <vector>
-#include <array>
 #include <map>
 #include <fstream>
 #include <iostream>
@@ -13,6 +12,8 @@ const int MAX_NUMBER_OF_NFSM_COPIES = 1000;
 const char LAMBDA_CH = '§'; //character to represent a lambda-transition
 const char BETA_CH = '#'; //character to represent a beta-transition
 						  //(like lambda-transition, but consumes one symbol) for "." metachar
+const char BRACKET_DELIM = '$';
+const char OR_DELIM = '%';
 
 enum class TransType { VALID_TRANSITION, INVALID_TRANSITION, FINAL_STATE, 
 	NON_D_TRANSITION, L_TRANSITION, NOT_FINAL_LAMBDA, FINAL_STATE_LAMBDA, NOT_FINAL, ERROR_ };
@@ -98,7 +99,6 @@ private:
 	StateCouple m_nfsm;
 	int m_s_id;
 };
-
 class Transition {
 public:
 	Transition();
@@ -115,7 +115,6 @@ private:
 	State * m_in;
 	char m_symbol;
 };
-
 class State {
 public:
 	State(int id, bool initial = false, bool finals = false);
@@ -139,8 +138,6 @@ private:
 	bool m_final_state;
 	bool m_empty;
 };
-
-
 class Thompsons : public TransformAlgorithm {
 public:
 	Thompsons(std::string regexpr);
@@ -165,8 +162,9 @@ private:
 	StateCouple connect_NFSM(State*, State*, State*, State*);
 	StateCouple make_bracket_NFSM(std::string::iterator, std::wstring&, char);
 	StateCouple copy_nfsm(State*, State*);
-	std::string read_or(std::string::iterator it);
-	std::string read_bracket(std::string::iterator it);
+	std::string read_or_forwards(std::string::iterator& it);
+	std::string read_or_backwards(std::string::iterator& it);
+	std::string read_bracket(std::string::iterator& it);
 	std::vector<reg_decom> symbols;
 	std::vector<reg_decom> meta_symbols;
 	std::wstring m_output_ws;
@@ -181,7 +179,6 @@ private:
 	std::shared_ptr<State> m_states; // array of all states
 };
 //helper functions
-
 bool is_meta_char(char ch);
 State * find_initial(std::vector<State> *);
 State * find_final(std::vector<State> *);
@@ -190,4 +187,6 @@ bool is_bracket(char ch);
 bool is_meta_char_nb(char ch); //without ()
 bool is_star_plus_quest(char ch);
 std::wstring read_output_wnd(CWnd * wnd);
+std::string read_subexpr_backwards(std::string::iterator&, char);
+std::string read_subexpr_forwards(std::string::iterator&, char);
 
