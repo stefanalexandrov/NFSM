@@ -7,7 +7,7 @@
 #include <set>
 #include <memory>
 
-const int MAX_NUMBER_OF_STATES = 10000;
+const int MAX_NUMBER_OF_STATES = 100000;
 const int MAX_NUMBER_OF_NFSM_COPIES = 1000;
 const char LAMBDA_CH = '§'; //character to represent a lambda-transition
 const char BETA_CH = '#'; //character to represent a beta-transition
@@ -62,18 +62,19 @@ TransType run_lambda();
 
 class RUN {
 public:
-	RUN(NFSM* machine, CWnd* output_wnd);
-	//RUN object should not be copied.
+	static RUN& GetInstance(NFSM* machine, CWnd* output_wnd) {
+		static RUN instance(machine, output_wnd);
+		return instance;
+	}
 	RUN(const RUN&) = delete; //copy constructor
 	RUN& operator=(const RUN&) = delete; //copy assignment
-	//RUN(RUN&&) = delete; //move constructor
-	//RUN& operator=(RUN&&) = delete; //move assignment
 	TransType make_transition(char input, bool last_ch);
 	TransType make_transition(); // for empty string
 	friend TransType run_lambda(RUN*, std::vector<NFSM>*, bool, std::set<int>*, int*);
 	TransType RUN::transition_for_symbol(std::vector<NFSM>*, NFSM*, char, bool, int*, bool formal = false);
 	int formal(int length);
 private:
+	RUN(NFSM* machine, CWnd* output_wnd);
 	std::vector<NFSM> m_nfsms;
 	NFSM* m_nfsm;
 	CWnd * m_output;

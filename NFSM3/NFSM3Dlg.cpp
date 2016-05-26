@@ -373,7 +373,7 @@ void CNFSM3Dlg::OnFormal() {
 	CWnd * wnd_output = GetDlgItem(IDC_STATIC2);
 	CWnd * wnd_formal = GetDlgItem(IDC_BUTTON5);
 	std::wstring output_ws;
-	RUN check(&m_nfsm, wnd_output);
+	RUN& check = RUN::GetInstance(&m_nfsm, wnd_output);
 	//check = std::move(RUN(m_nfsm));
 	int bound = check.formal(0);
 	TCHAR number[50];
@@ -400,7 +400,7 @@ void CNFSM3Dlg::OnRunNFSM()
 	wnd_output->SetWindowTextW(output_ws.c_str());
 
 	//RUN check = RUN(m_nfsm);
-	RUN check(&m_nfsm, wnd_output);
+	RUN& check = RUN::GetInstance(&m_nfsm, wnd_output);
 
 	bool accepted = false;
 	TransType result = TransType::NOT_FINAL;
