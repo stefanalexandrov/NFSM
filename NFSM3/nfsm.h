@@ -1,4 +1,6 @@
 #pragma once
+
+
 #include <string>
 #include <vector>
 #include <map>
@@ -6,6 +8,12 @@
 #include <iostream>
 #include <set>
 #include <memory>
+#include <chrono>
+#include <ctime>
+#include <ratio>
+#include <exception>
+
+
 
 const int MAX_NUMBER_OF_STATES = 100000;
 const int MAX_NUMBER_OF_NFSM_COPIES = 1000;
@@ -14,6 +22,30 @@ const char BETA_CH = '#'; //character to represent a beta-transition
 						  //(like lambda-transition, but consumes one symbol) for "." metachar
 const char BRACKET_DELIM = '$';
 const char OR_DELIM = '%';
+
+class Nullptr : public std::exception
+{
+public:
+	Nullptr(const std::string& er) : m_error(er) {}
+	virtual const char* what() const noexcept override
+	{
+		return m_error.c_str();
+	}
+private:
+	std::string m_error;
+};
+
+class Badargument : public std::exception
+{
+public:
+	Badargument(const std::string& er) : m_error(er) {}
+	virtual const char* what() const noexcept override
+	{
+		return m_error.c_str();
+	}
+private:
+	std::string m_error;
+};
 
 enum class TransType { VALID_TRANSITION, INVALID_TRANSITION, FINAL_STATE, 
 	NON_D_TRANSITION, L_TRANSITION, NOT_FINAL_LAMBDA, FINAL_STATE_LAMBDA, NOT_FINAL, ERROR_ };
@@ -53,8 +85,30 @@ public:
 };
 class Optimizer {
 public:
-	virtual void optimize(State* init, int m_s_id) = 0;
+	virtual void optimize(State* init, std::shared_ptr<State>, int m_s_id) = 0;
 	virtual ~Optimizer() {}
+};
+class Logger {
+public:
+	virtual Logger& operator<<(std::wstring) = 0;
+	virtual Logger& operator<<(std::string) = 0;
+	virtual Logger& operator<<(int) = 0;
+	virtual ~Logger() {};
+};
+
+class SimpleLogger : public Logger {
+public:
+	static SimpleLogger& GetInstance() {
+		static SimpleLogger instance;
+		return instance;
+	}
+	Logger& operator<<(std::wstring);
+	Logger& operator<<(std::string);
+	Logger& operator<<(int);
+	~SimpleLogger();
+private:
+	SimpleLogger();
+	std::ofstream m_log_file;
 };
 
 class NFSM;
@@ -109,6 +163,7 @@ private:
 	CWnd * m_output;
 	StateCouple m_nfsm;
 	int m_s_id;
+	Logger& m_logger;
 };
 class Transition {
 public:
@@ -188,6 +243,7 @@ private:
 	int m_t_id;
 	std::string m_regexpr;
 	std::shared_ptr<State> m_states; // array of all states
+	Logger& m_logger;
 };
 class DOTSaver : public NFSMSaver {
 public:
@@ -197,8 +253,11 @@ public:
 
 class SuperflousStatesRemover: public Optimizer {
 public:
-	void optimize(State* init, int m_s_id);
+	SuperflousStatesRemover(): m_logger { SimpleLogger::GetInstance() } {}
+	void optimize(State* init, std::shared_ptr<State>, int m_s_id);
 	~SuperflousStatesRemover() {}
+private:
+	Logger& m_logger;
 };
 
 //helper functions

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "nfsm.h"
 #include "NFSM3.h"
 #include "NFSM3Dlg.h"
@@ -35,7 +35,8 @@ void State::set_transition(int id, char symbol, State * in) {
 	in->m_in.push_back(Transition(id, symbol, this, in));
 }
 Thompsons::Thompsons(std::string regexpr) : m_regexpr(regexpr),
-m_states{ new State[MAX_NUMBER_OF_STATES], std::default_delete<State[]>() }
+    m_states{ new State[MAX_NUMBER_OF_STATES],
+    std::default_delete<State[]>() }, m_logger{ SimpleLogger::GetInstance() }
 {
 	State* states = m_states.get();
 	for (int i = 0; i < MAX_NUMBER_OF_STATES; i++)
@@ -48,7 +49,7 @@ RUN::RUN(NFSM* machine, CWnd* output_wnd) {
 	m_nfsms.reserve(MAX_NUMBER_OF_NFSM_COPIES);
 	m_output = output_wnd;
 }
-NFSM::NFSM() : m_states{ nullptr } {
+NFSM::NFSM() : m_states{ nullptr }, m_logger{ SimpleLogger::GetInstance() } {
 	m_constructed = false;
 	m_valid = true;
 }
@@ -58,7 +59,8 @@ NFSM::NFSM(const NFSM& nfsm) :
 	m_constructed{ nfsm.m_constructed },
 	m_valid{ nfsm.m_valid },
 	m_output{ nfsm.m_output },
-	m_s_id{ nfsm.m_s_id }
+	m_s_id{ nfsm.m_s_id },
+	m_logger{ SimpleLogger::GetInstance() }
 {}
 NFSM& NFSM::operator=(const NFSM& nfsm) {
 	m_states = m_states;
@@ -72,7 +74,8 @@ NFSM& NFSM::operator=(const NFSM& nfsm) {
 NFSM::NFSM(NFSM&& nfsm):
     m_states{ nfsm.m_states }, //just grab elements without copying
 	m_current{ nfsm.m_current }, m_constructed{ nfsm.m_constructed },
-    m_valid{ nfsm.m_valid }, m_output{ nfsm.m_output }, m_s_id{ nfsm.m_s_id }
+    m_valid{ nfsm.m_valid }, m_output{ nfsm.m_output }, m_s_id{ nfsm.m_s_id },
+	m_logger{ SimpleLogger::GetInstance() }
 {
 	nfsm.m_states = nullptr;
 	nfsm.m_current = nullptr;
@@ -107,6 +110,7 @@ void Thompsons::first_stage() {
 	TCHAR number[N_DIGITS];
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_1_structure.size());
 	m_output_ws.append(number);
+	m_logger << m_output_ws;
 	return;
 }
 void Thompsons::second_stage() {
@@ -148,6 +152,7 @@ void Thompsons::second_stage() {
 	m_output_ws.append(_T("Done! Number of NFSMs: "));
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_2_structure.size());
 	m_output_ws.append(number);
+	m_logger << m_output_ws;
 	return;
 }
 
@@ -283,6 +288,7 @@ void Thompsons::third_stage() {
 	m_output_ws.append(_T("Done! Number of NFSMs: "));
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_or_structure.size());
 	m_output_ws.append(number);
+	m_logger << m_output_ws;
 	return;
 }
 void Thompsons::fourth_stage() {
@@ -333,6 +339,7 @@ void Thompsons::fourth_stage() {
 	m_output_ws.append(_T("Done! Number of NFSMs: "));
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_3_structure.size());
 	m_output_ws.append(number);
+	m_logger << m_output_ws;
 	return;
 }
 void Thompsons::fifth_stage() {
@@ -453,6 +460,7 @@ void Thompsons::fifth_stage() {
 			}
 		}
 	}
+	m_logger << m_output_ws;
 	return;
 }
 void Thompsons::concatenate() {
@@ -526,33 +534,49 @@ void Thompsons::concatenate() {
 		sub_nfsm_1 = connect_NFSM(sub_nfsm_1.m_init, sub_nfsm_1.m_final, sub_nfsm_2.m_init, sub_nfsm_2.m_final);
 	}
 	m_4_structure.insert(SymbolAndNFSMpairS(m_regexpr, sub_nfsm_1));
+	m_logger << m_output_ws;
 }
 StateCouple Thompsons::transform() {
-	first_stage();
-	second_stage();
-	third_stage();
-	fourth_stage();
-	fifth_stage();
-	concatenate();
-	return m_4_structure.at(m_regexpr);
+	try {
+		first_stage();
+		second_stage();
+		third_stage();
+		fourth_stage();
+		fifth_stage();
+		concatenate();
+		return m_4_structure.at(m_regexpr);
+	}
+	catch (std::out_of_range e) {
+		m_logger << "Out of range: " << e.what();
+	}
+	catch (Nullptr e) {
+		m_logger << "Null pointer: " << e.what();
+	}
+	catch (Badargument e) {
+		m_logger << "Bad argument: " << e.what();
+	}
+	catch (...) {
+		m_logger << "Unknown error. Terminating...";
+	}
 }
 
 int NFSM::construct(TransformAlgorithm& algorithm) {
 	std::wstring output_ws = read_output_wnd(m_output);
 	output_ws.append(_T("Starting Transformation... \r\n"));
-		
+	m_logger << output_ws;
 	m_nfsm = algorithm.transform();
 	m_current = m_nfsm.m_init;
 	m_states = algorithm.get_states();
 	m_s_id = algorithm.get_number_of_states();
 	output_ws.append(algorithm.get_log());
-	
 	output_ws.append(_T("Done... \r\n "));
+	m_logger << output_ws;
 	m_output->SetWindowTextW(output_ws.c_str());
 	m_constructed = true;
 	return 0;
 }
 StateCouple Thompsons::make_or_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2) {
+	if (!s_init_1 || !s_final_1 || !s_init_2 || !s_final_2) throw Nullptr("make_or_NFSM: zero pointer passed as an argument.");
 	State* states = m_states.get();
 	//copy nfsms
 	StateCouple left = copy_nfsm(s_init_1, s_final_1);
@@ -582,6 +606,7 @@ StateCouple Thompsons::make_or_NFSM(State * s_init_1, State * s_final_1, State *
 }
 
 StateCouple Thompsons::copy_nfsm(State * init, State * final_s) {
+	if (!init || !final_s) throw Nullptr("copy_nfsm: null pointer passed as an argument");
 	//first copy initial state
 	State* states = m_states.get();
 	states[m_s_id] = *init;
@@ -606,8 +631,8 @@ StateCouple Thompsons::copy_nfsm(State * init, State * final_s) {
 	current.push_back(&states[m_s_id - 2]);
 	while (1) {
 		done_check = done;
-		for (std::vector<State *>::iterator j = current.begin(); j != current.end(); j++) {
-			for (std::vector<Transition>::iterator i = (*j)->get_out().begin(); i != (*j)->get_out().end(); i++) {
+		for (auto j = current.begin(); j != current.end(); j++) {
+			for (auto i = (*j)->get_out().begin(); i != (*j)->get_out().end(); i++) {
 				if (i->get_to() == final_s) {
 					i->set_to(states[final_id]);
 					//current_new.push_back(&m_states[m_s_id]);
@@ -662,7 +687,7 @@ int RUN::formal(int length) { //compute bounds on number of NFSM copies
 		
 		for (auto tt = runs.begin(); tt != runs.end(); tt++) {
 
-			run_lambda(NULL, &(*tt), false, &visited_states, &n_invalidated); // first stage: perform all possible �-transitions
+			run_lambda(NULL, &(*tt), false, &visited_states, &n_invalidated); // first stage: perform all possible §-transitions
 			// lambda-transitions are creators of the copies
 			//actually delete nfsms 
 			while (n_invalidated-- > 0)
@@ -874,6 +899,7 @@ State * find_final(std::vector<State> * s) {
 }
 
 StateCouple Thompsons::make_star_NFSM(State * s_init, State * s_final) {
+	if (!s_init || !s_final) throw Nullptr("make_star_NFSM: null pointer as an argument.");
 	State* states = m_states.get();
 	//copy nfsm
 	StateCouple copy = copy_nfsm(s_init, s_final);
@@ -899,6 +925,7 @@ StateCouple Thompsons::make_star_NFSM(State * s_init, State * s_final) {
 	return StateCouple(p_a, p_b);
 }
 StateCouple Thompsons::make_plus_NFSM(State * s_init, State * s_final) {
+	if (!s_init || !s_final) throw Nullptr("make_plus_NFSM: null pointer as an argument.");
 	State* states = m_states.get();
 	//copy nfsm
 	StateCouple copy = copy_nfsm(s_init, s_final);
@@ -922,11 +949,13 @@ StateCouple Thompsons::make_plus_NFSM(State * s_init, State * s_final) {
 	return StateCouple(p_a, p_b);
 }
 StateCouple Thompsons::make_simple_NFSM(State * s_init, State * s_final) {
+	if (!s_init || !s_final) throw Nullptr("make_simple_NFSM: null pointer as an argument.");
 	//copy nfsm
 	StateCouple copy = copy_nfsm(s_init, s_final);
 	return copy;
 }
 StateCouple Thompsons::make_question_NFSM(State * s_init, State * s_final) {
+	if (!s_init || !s_final) throw Nullptr("make_question_NFSM: null pointer as an argument.");
 	State* states = m_states.get();
 	//copy nfsm
 	StateCouple copy = copy_nfsm(s_init, s_final);
@@ -967,6 +996,7 @@ StateCouple Thompsons::make_one_symbol_NFSM(char ch) {
 	return StateCouple(p_a, p_b);
 }
 StateCouple Thompsons::connect_NFSM(State * s_init_1, State * s_final_1, State * s_init_2, State * s_final_2) {
+	if (!s_init_1 || !s_final_1 || !s_init_2 || !s_final_2) throw Nullptr("connect_NFSM: null pointer as an argument.");
 	s_final_1->set_final(false);
 	s_final_1->set_transition(m_t_id++, LAMBDA_CH, s_init_2);
 	s_init_2->set_initial(false);
@@ -975,6 +1005,7 @@ StateCouple Thompsons::connect_NFSM(State * s_init_1, State * s_final_1, State *
 }
 
 StateCouple Thompsons::make_bracket_NFSM(std::string::iterator i, std::wstring & output_ws, char type) {
+	if (*i != ')') throw Badargument("make_bracket_NFSM: bad argument passed.");
 	std::string sub_expr = "";
 	std::string tmp = "";
 	
@@ -1012,7 +1043,7 @@ StateCouple Thompsons::make_bracket_NFSM(std::string::iterator i, std::wstring &
 				sub_nfsm_1 = copy_nfsm(m_1_structure.at(*j).m_init, m_1_structure.at(*j).m_final);
 				j = prev_pos;
 			}
-			first_iter == false;
+			first_iter = false;
 		} 
 		tmp = "";
 		if (*j != '(' && j != m_regexpr.begin()) {
@@ -1080,16 +1111,17 @@ StateCouple Thompsons::make_bracket_NFSM(std::string::iterator i, std::wstring &
 
 }
 void NFSM::optimize(Optimizer& opt) {
-	opt.optimize(m_nfsm.m_init, m_s_id);
+	opt.optimize(m_nfsm.m_init, m_states, m_s_id);
 }
-void SuperflousStatesRemover::optimize(State* init, int m_s_id) {
-	State* states = init;
+void SuperflousStatesRemover::optimize(State* init, std::shared_ptr<State> states, int m_s_id) {
+	m_logger << "Start optimization... \n";
+	int n_removed = 0;
 	int start_id = init->get_id();
 
 	int num = 5;
 	while (num--) {
 		for (int i = start_id; i <= m_s_id; i++) {
-			State * st = &states[i];
+			State * st = &states.get()[i];
 			bool only_lambda = true;
 			if (st->is_empty() == true)
 				continue;
@@ -1120,7 +1152,8 @@ void SuperflousStatesRemover::optimize(State* init, int m_s_id) {
 					from->get_out().push_back(*it);
 				}
 				// delete the state
-				states[i].set_empty(true);
+				states.get()[i].set_empty(true);
+				n_removed += 1;
 			}
 		}
 	}
@@ -1128,7 +1161,7 @@ void SuperflousStatesRemover::optimize(State* init, int m_s_id) {
 	num = 5;
 	while (num--) {
 		for (int i = start_id; i <= m_s_id; i++) {
-			State * st = &states[i];
+			State * st = &states.get()[i];
 			bool only_lambda = true;
 			if (st->is_empty() == true)
 				continue;
@@ -1159,11 +1192,12 @@ void SuperflousStatesRemover::optimize(State* init, int m_s_id) {
 					to->get_in().push_back(*it);
 				}
 				// delete the state
-				states[i].set_empty(true);
-
+				states.get()[i].set_empty(true);
+				n_removed += 1;
 			}
 		}
 	}
+	m_logger << "States removed: " << n_removed << ". Done.\n";
 }
 
 bool is_numeric(char ch) {
@@ -1323,4 +1357,32 @@ std::string read_subexpr_forwards(std::string::iterator& it, char delimeter) {
 	}
 	str += *it;
 	return str;
+}
+SimpleLogger::SimpleLogger() {
+	m_log_file.open("log.txt", std::ofstream::app);
+	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+	std::time_t tt = std::chrono::system_clock::to_time_t(now);
+	m_log_file << "Start logging>>>" << ctime(&tt) << "\n";
+}
+SimpleLogger::~SimpleLogger() {
+	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+	std::time_t tt = std::chrono::system_clock::to_time_t(now);
+	m_log_file << "Stop logging " << ctime(&tt) << "\n";
+	m_log_file.close();
+}
+Logger& SimpleLogger::operator<<(std::wstring st) {
+	std::string tmp(st.begin(), st.end());
+	m_log_file << tmp;
+	m_log_file.flush();
+	return *this;
+}
+Logger& SimpleLogger::operator<<(std::string st) {
+	m_log_file << st;
+	m_log_file.flush();
+	return *this;
+}
+Logger& SimpleLogger::operator<<(int n) {
+	m_log_file << n;
+	m_log_file.flush();
+	return *this;
 }
