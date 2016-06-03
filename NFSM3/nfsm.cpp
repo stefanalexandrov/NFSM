@@ -36,7 +36,7 @@ void State::set_transition(int id, char symbol, State * in) {
 }
 Thompsons::Thompsons(std::string regexpr) : m_regexpr(regexpr),
     m_states{ new State[MAX_NUMBER_OF_STATES],
-    std::default_delete<State[]>() }, m_logger{ SimpleLogger::GetInstance() }
+	std::default_delete<State[]>() }, m_logger{ SimpleLogger::GetInstance() }, m_logging{false}
 {
 	State* states = m_states.get();
 	for (int i = 0; i < MAX_NUMBER_OF_STATES; i++)
@@ -49,10 +49,8 @@ RUN::RUN(NFSM* machine, CWnd* output_wnd) {
 	m_nfsms.reserve(MAX_NUMBER_OF_NFSM_COPIES);
 	m_output = output_wnd;
 }
-NFSM::NFSM() : m_states{ nullptr }, m_logger{ SimpleLogger::GetInstance() } {
-	m_constructed = false;
-	m_valid = true;
-}
+NFSM::NFSM() : m_states{ nullptr }, m_logger{ SimpleLogger::GetInstance() }, m_logging{false},
+    m_constructed{ false }, m_valid{true} {}
 NFSM::NFSM(const NFSM& nfsm) :
     m_states{ nfsm.m_states },
 	m_current{ nfsm.m_current },
@@ -60,7 +58,8 @@ NFSM::NFSM(const NFSM& nfsm) :
 	m_valid{ nfsm.m_valid },
 	m_output{ nfsm.m_output },
 	m_s_id{ nfsm.m_s_id },
-	m_logger{ SimpleLogger::GetInstance() }
+	m_logger{ SimpleLogger::GetInstance() },
+	m_logging{ nfsm.m_logging }
 {}
 NFSM& NFSM::operator=(const NFSM& nfsm) {
 	m_states = m_states;
@@ -69,13 +68,14 @@ NFSM& NFSM::operator=(const NFSM& nfsm) {
 	m_valid = nfsm.m_valid;
 	m_output = nfsm.m_output;
 	m_s_id = nfsm.m_s_id; 
+	m_logging = nfsm.m_logging;
 	return *this;
 }
 NFSM::NFSM(NFSM&& nfsm):
     m_states{ nfsm.m_states }, //just grab elements without copying
 	m_current{ nfsm.m_current }, m_constructed{ nfsm.m_constructed },
     m_valid{ nfsm.m_valid }, m_output{ nfsm.m_output }, m_s_id{ nfsm.m_s_id },
-	m_logger{ SimpleLogger::GetInstance() }
+	m_logger{ SimpleLogger::GetInstance() }, m_logging{nfsm.m_logging}
 {
 	nfsm.m_states = nullptr;
 	nfsm.m_current = nullptr;
@@ -89,6 +89,7 @@ NFSM& NFSM::operator=(NFSM&& nfsm) {
 	nfsm.m_states = nullptr;
 	nfsm.m_current = nullptr;
 	m_s_id = nfsm.m_s_id;
+	m_logging = nfsm.m_logging;
 	return *this;
 }
 void Thompsons::first_stage() {
@@ -110,7 +111,7 @@ void Thompsons::first_stage() {
 	TCHAR number[N_DIGITS];
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_1_structure.size());
 	m_output_ws.append(number);
-	m_logger << m_output_ws;
+	if (m_logging) m_logger << m_output_ws;
 	return;
 }
 void Thompsons::second_stage() {
@@ -152,7 +153,7 @@ void Thompsons::second_stage() {
 	m_output_ws.append(_T("Done! Number of NFSMs: "));
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_2_structure.size());
 	m_output_ws.append(number);
-	m_logger << m_output_ws;
+	if (m_logging) m_logger << m_output_ws;
 	return;
 }
 
@@ -288,7 +289,7 @@ void Thompsons::third_stage() {
 	m_output_ws.append(_T("Done! Number of NFSMs: "));
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_or_structure.size());
 	m_output_ws.append(number);
-	m_logger << m_output_ws;
+	if (m_logging) m_logger << m_output_ws;
 	return;
 }
 void Thompsons::fourth_stage() {
@@ -339,7 +340,7 @@ void Thompsons::fourth_stage() {
 	m_output_ws.append(_T("Done! Number of NFSMs: "));
 	swprintf_s(number, N_DIGITS, _T("%d \r\n"), m_3_structure.size());
 	m_output_ws.append(number);
-	m_logger << m_output_ws;
+	if (m_logging) m_logger << m_output_ws;
 	return;
 }
 void Thompsons::fifth_stage() {
@@ -460,7 +461,7 @@ void Thompsons::fifth_stage() {
 			}
 		}
 	}
-	m_logger << m_output_ws;
+	if (m_logging) m_logger << m_output_ws;
 	return;
 }
 void Thompsons::concatenate() {
@@ -534,7 +535,7 @@ void Thompsons::concatenate() {
 		sub_nfsm_1 = connect_NFSM(sub_nfsm_1.m_init, sub_nfsm_1.m_final, sub_nfsm_2.m_init, sub_nfsm_2.m_final);
 	}
 	m_4_structure.insert(SymbolAndNFSMpairS(m_regexpr, sub_nfsm_1));
-	m_logger << m_output_ws;
+	if (m_logging) m_logger << m_output_ws;
 }
 StateCouple Thompsons::transform() {
 	try {
@@ -547,30 +548,30 @@ StateCouple Thompsons::transform() {
 		return m_4_structure.at(m_regexpr);
 	}
 	catch (std::out_of_range e) {
-		m_logger << "Out of range: " << e.what();
+		if (m_logging) m_logger << "Out of range: " << e.what();
 	}
 	catch (Nullptr e) {
-		m_logger << "Null pointer: " << e.what();
+		if (m_logging) m_logger << "Null pointer: " << e.what();
 	}
 	catch (Badargument e) {
-		m_logger << "Bad argument: " << e.what();
+		if (m_logging) m_logger << "Bad argument: " << e.what();
 	}
 	catch (...) {
-		m_logger << "Unknown error. Terminating...";
+		if (m_logging) m_logger << "Unknown error. Terminating...";
 	}
 }
 
 int NFSM::construct(TransformAlgorithm& algorithm) {
 	std::wstring output_ws = read_output_wnd(m_output);
 	output_ws.append(_T("Starting Transformation... \r\n"));
-	m_logger << output_ws;
+	if (m_logging) m_logger << output_ws;
 	m_nfsm = algorithm.transform();
 	m_current = m_nfsm.m_init;
 	m_states = algorithm.get_states();
 	m_s_id = algorithm.get_number_of_states();
 	output_ws.append(algorithm.get_log());
 	output_ws.append(_T("Done... \r\n "));
-	m_logger << output_ws;
+	if (m_logging) m_logger << output_ws;
 	m_output->SetWindowTextW(output_ws.c_str());
 	m_constructed = true;
 	return 0;
@@ -1114,7 +1115,7 @@ void NFSM::optimize(Optimizer& opt) {
 	opt.optimize(m_nfsm.m_init, m_states, m_s_id);
 }
 void SuperflousStatesRemover::optimize(State* init, std::shared_ptr<State> states, int m_s_id) {
-	m_logger << "Start optimization... \n";
+	if (m_logging) m_logger << "Start optimization... \n";
 	int n_removed = 0;
 	int start_id = init->get_id();
 
@@ -1197,7 +1198,7 @@ void SuperflousStatesRemover::optimize(State* init, std::shared_ptr<State> state
 			}
 		}
 	}
-	m_logger << "States removed: " << n_removed << ". Done.\n";
+	if (m_logging) m_logger << "States removed: " << n_removed << ". Done.\n";
 }
 
 bool is_numeric(char ch) {

@@ -87,6 +87,7 @@ BEGIN_MESSAGE_MAP(CNFSM3Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON5, &CNFSM3Dlg::OnFormal)
 	ON_EN_CHANGE(IDC_EDIT1, &CNFSM3Dlg::OnChangeRegExpr)
 	ON_STN_CLICKED(IDC_STATIC4, &CNFSM3Dlg::OnStnClickedStatic4)
+	ON_BN_CLICKED(IDC_CHECK3, &CNFSM3Dlg::OnBnClickedCheck3)
 END_MESSAGE_MAP()
 
 
@@ -352,13 +353,21 @@ void CNFSM3Dlg::OnTransform() {
 	CWnd * wnd_progress = GetDlgItem(IDC_PROGCTRL1);
 	CWnd * wnd_transform = GetDlgItem(IDC_BUTTON1);
 	CButton * chb_opt = (CButton *)GetDlgItem(IDC_CHECK2);
+	CButton * chb_logging = (CButton *)GetDlgItem(IDC_CHECK3);
 
 	m_nfsm.set_out_wnd(wnd_output);
-	//std::unique_ptr<Thompsons> algorithm(new Thompsons(reg_expr_s));
 	Thompsons algorithm(reg_expr_s);
+	if (chb_logging->GetCheck() == BST_CHECKED) {
+		m_nfsm.set_logging(true);
+		algorithm.set_logging(true);
+	}
 	m_nfsm.construct(algorithm);
-	if (chb_opt->GetCheck() == BST_CHECKED)
-		m_nfsm.optimize(SuperflousStatesRemover());
+	if (chb_opt->GetCheck() == BST_CHECKED) {
+		SuperflousStatesRemover optimizer;
+		if (chb_logging->GetCheck() == BST_CHECKED)
+		    optimizer.set_logging(true);
+		m_nfsm.optimize(optimizer);
+	}
 	m_nfsm.save(DOTSaver());
 	//enable run button
 	CWnd * wnd_run = GetDlgItem(IDC_BUTTON4);
@@ -438,6 +447,12 @@ void CNFSM3Dlg::OnRunNFSM()
 }
 
 void CNFSM3Dlg::OnStnClickedStatic4()
+{
+	// TODO: Add your control notification handler code here
+}
+
+
+void CNFSM3Dlg::OnBnClickedCheck3()
 {
 	// TODO: Add your control notification handler code here
 }

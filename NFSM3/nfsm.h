@@ -154,6 +154,7 @@ public:
 	inline bool set_constructed(bool val) {m_constructed = val;}
 	inline State* get_current() { return m_current; }
 	inline void set_current(State* st) { m_current = st; }
+	inline void set_logging(bool b) { m_logging = b; }
 	void optimize(Optimizer&);
 private:
 	std::shared_ptr<State> m_states; // array of all states
@@ -164,6 +165,7 @@ private:
 	StateCouple m_nfsm;
 	int m_s_id;
 	Logger& m_logger;
+	bool m_logging;
 };
 class Transition {
 public:
@@ -207,10 +209,13 @@ private:
 class Thompsons : public TransformAlgorithm {
 public:
 	Thompsons(std::string regexpr);
+	Thompsons(const Thompsons&) = delete;
+	Thompsons& operator=(const Thompsons&) = delete;
 	StateCouple transform(); //inteface
 	std::wstring get_log() const { return m_output_ws; }
 	std::shared_ptr<State> get_states() const { return m_states; }
 	int get_number_of_states() const { return m_s_id; }
+	inline void set_logging(bool b) { m_logging = b; }
 	~Thompsons() {}
 private:
 	void first_stage();
@@ -244,6 +249,7 @@ private:
 	std::string m_regexpr;
 	std::shared_ptr<State> m_states; // array of all states
 	Logger& m_logger;
+	bool m_logging;
 };
 class DOTSaver : public NFSMSaver {
 public:
@@ -253,11 +259,15 @@ public:
 
 class SuperflousStatesRemover: public Optimizer {
 public:
-	SuperflousStatesRemover(): m_logger { SimpleLogger::GetInstance() } {}
+	SuperflousStatesRemover() : m_logger{ SimpleLogger::GetInstance() }, m_logging{false} {}
+	SuperflousStatesRemover(const SuperflousStatesRemover&) = delete;
+	SuperflousStatesRemover& operator=(const SuperflousStatesRemover&) = delete;
 	void optimize(State* init, std::shared_ptr<State>, int m_s_id);
+	inline void set_logging(bool b) { m_logging = true; }
 	~SuperflousStatesRemover() {}
 private:
 	Logger& m_logger;
+	bool m_logging;
 };
 
 //helper functions

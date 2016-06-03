@@ -68,6 +68,7 @@ public:
 	std::wstring output_error_ws;
 	NFSM m_nfsm;
 	afx_msg void OnStnClickedStatic4();
+	afx_msg void OnBnClickedCheck3();
 };
 
 int check_reg_expr(std::string s);
