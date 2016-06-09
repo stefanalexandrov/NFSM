@@ -232,7 +232,7 @@ void Thompsons::third_stage() {
 					&& *one_after_or != OR_DELIM) {
 					right = *one_after_or;
 					right += *two_after_or;
-					left = read_subexpr_backwards(one_before_or, OR_DELIM); one_before_or--;
+					left = read_subexpr_backwards(one_before_or, OR_DELIM);
 					expr += left; expr += "|"; expr += right;
 					nfsm_left = m_or_structure.at(left);
 					nfsm_right = m_2_structure.at(right);
@@ -240,14 +240,14 @@ void Thompsons::third_stage() {
 				// %number%|<symbol>
 				else if ((*one_before_or == OR_DELIM) && !is_meta_char(*one_after_or)
 					&&	(two_after_or == end || !is_meta_char_nb(*two_after_or)) && *one_after_or != OR_DELIM) {
-					left = read_subexpr_backwards(one_before_or, OR_DELIM); one_before_or--;
+					left = read_subexpr_backwards(one_before_or, OR_DELIM);
 					char c_right = *one_after_or;
 					expr += left; expr += "|"; expr += c_right;
 					nfsm_left = m_or_structure.at(left);
 					nfsm_right = m_1_structure.at(c_right);
 				} // <symbol>|%number%
 				else if (!is_meta_char(*one_before_or) && (*one_before_or != OR_DELIM) && (*one_after_or == OR_DELIM)) {
-					right = read_subexpr_forwards(one_after_or, OR_DELIM); one_after_or++;
+					right = read_subexpr_forwards(one_after_or, OR_DELIM);
 					char c_left = *one_before_or;
 					expr += c_left; expr += "|"; expr += right;
 					nfsm_left = m_1_structure.at(c_left);
@@ -255,7 +255,7 @@ void Thompsons::third_stage() {
 				} // <symbol>metachar|%number%
 				else if (is_star_plus_quest(*one_before_or) && (*one_before_or != OR_DELIM)
 					&& (*one_after_or == OR_DELIM)) {
-					right = read_subexpr_forwards(one_after_or, OR_DELIM); one_after_or++;
+					right = read_subexpr_forwards(one_after_or, OR_DELIM);
 					left = *two_before_or;
 					left += *one_before_or;
 					expr += left; expr += "|"; expr += right;
