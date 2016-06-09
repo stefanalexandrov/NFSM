@@ -6,7 +6,6 @@
 #define MAX_OUTPUT_SIZE 2000
 #include <string>
 #include <regex>
-#include <boost/regex.hpp>
 #include <algorithm>
 #include "nfsm.h"
 #include "Resource.h"

@@ -108,6 +108,7 @@ public:
 	~SimpleLogger();
 private:
 	SimpleLogger();
+	void openIfUnopened();
 	std::ofstream m_log_file;
 };
 
