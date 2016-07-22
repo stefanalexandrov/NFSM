@@ -467,74 +467,83 @@ void Thompsons::fifth_stage() {
 void Thompsons::concatenate() {
 	m_output_ws.append(_T(">Concatenation... "));
 	bool first_run = true;
-	StateCouple new_nfsm, sub_nfsm_1, sub_nfsm_2;
+	StateCouple new_nfsm{ nullptr, nullptr };
+	StateCouple sub_nfsm_1{ nullptr, nullptr };
+	StateCouple sub_nfsm_2 {nullptr, nullptr};
 	std::string used_nfsms = "";
 	std::string::iterator begin = m_regexpr.begin();
 	std::string::iterator end = m_regexpr.end();
 	bool end_of_s = false;
-	for (auto i = begin; i != end; ++i) {
+	if (m_1_structure.size() > 1) {
+		for (auto i = begin; i != end; ++i) {
 
-		std::string::iterator pos = i;
-		if (i == m_regexpr.end() || ++pos == m_regexpr.end())
-			end_of_s = true;
+			std::string::iterator pos = i;
+			if (i == m_regexpr.end() || ++pos == m_regexpr.end())
+				end_of_s = true;
 
-		std::string tmp = "";
-		if (*i == OR_DELIM && first_run == true) {
-			tmp += read_subexpr_forwards(i , OR_DELIM);
-			i++;
-			sub_nfsm_1 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
-			if (i == end)
+			std::string tmp = "";
+			if (*i == OR_DELIM && first_run == true) {
+				tmp += read_subexpr_forwards(i, OR_DELIM);
+				i++;
+				sub_nfsm_1 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
+				if (i == end)
+					break;
+			}
+			else if (*i == BRACKET_DELIM && first_run == true) {
+				tmp += read_subexpr_forwards(i, BRACKET_DELIM);
+				i++;
+				sub_nfsm_1 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
+				if (i == end)
+					break;
+			}
+			else if (!end_of_s && is_meta_char(*pos) && first_run == true) {
+				tmp += *i;
+				tmp += *pos;
+				i = ++pos;
+				sub_nfsm_1 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
+			}
+			else if (first_run == true && pos != m_regexpr.end()) {
+				tmp += *i;
+				sub_nfsm_1 = copy_nfsm(m_1_structure.at(*i).m_init, m_1_structure.at(*i).m_final);
+				++i;
+			}
+			if (i == m_regexpr.end() || pos == m_regexpr.end())
+				end_of_s = true;
+			else if (first_run)
+				++pos;
+			if (pos == m_regexpr.end())
+				end_of_s = true;
+			first_run = false;
+			tmp = "";
+			if (!end_of_s && *i == OR_DELIM) {
+				tmp += read_subexpr_forwards(i, OR_DELIM);
+				sub_nfsm_2 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
+			}
+			else if (!end_of_s && *i == BRACKET_DELIM) {
+				tmp += read_subexpr_forwards(i, BRACKET_DELIM);
+				sub_nfsm_2 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
+			}
+			else if (!end_of_s && is_meta_char(*pos)) {
+				tmp += *i;
+				tmp += *pos;
+				sub_nfsm_2 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
+				i++;
+			}
+			else if (/*!end_of_s &&*/i != m_regexpr.end() && !is_meta_char(*i)) {
+				tmp += *i;
+				sub_nfsm_2 = copy_nfsm(m_1_structure.at(*i).m_init, m_1_structure.at(*i).m_final);
+			}
+			else
 				break;
+			if (sub_nfsm_2.m_init == nullptr || sub_nfsm_1.m_init == nullptr) throw Nullptr("In concatenation phase one of the two NFSMs being concatenated is empty!");
+			sub_nfsm_1 = connect_NFSM(sub_nfsm_1.m_init, sub_nfsm_1.m_final, sub_nfsm_2.m_init, sub_nfsm_2.m_final);
 		}
-		else if (*i == BRACKET_DELIM && first_run == true) {
-			tmp += read_subexpr_forwards(i, BRACKET_DELIM);
-			i++;
-			sub_nfsm_1 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
-			if (i == end)
-				break;
-		}
-		else if (!end_of_s && is_meta_char(*pos) && first_run == true) {
-			tmp += *i;
-			tmp += *pos;
-			i = ++pos;
-			sub_nfsm_1 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
-		}
-		else if (first_run == true && pos != m_regexpr.end()) {
-			tmp += *i;
-			sub_nfsm_1 = copy_nfsm(m_1_structure.at(*i).m_init, m_1_structure.at(*i).m_final);
-			++i;
-		}
-		if (i == m_regexpr.end() || pos == m_regexpr.end())
-			end_of_s = true;
-		else if (first_run)
-			++pos;
-		if (pos == m_regexpr.end())
-			end_of_s = true;
-		first_run = false;
-		tmp = "";
-		if (!end_of_s && *i == OR_DELIM) {
-			tmp += read_subexpr_forwards(i, OR_DELIM);
-			sub_nfsm_2 = copy_nfsm(m_or_structure.at(tmp).m_init, m_or_structure.at(tmp).m_final);
-		}
-		else if (!end_of_s && *i == BRACKET_DELIM) {
-			tmp += read_subexpr_forwards(i, BRACKET_DELIM);
-			sub_nfsm_2 = copy_nfsm(m_3_structure.at(tmp).m_init, m_3_structure.at(tmp).m_final);
-		}
-		else if (!end_of_s && is_meta_char(*pos)) {
-			tmp += *i;
-			tmp += *pos;
-			sub_nfsm_2 = copy_nfsm(m_2_structure.at(tmp).m_init, m_2_structure.at(tmp).m_final);
-			i++;
-		}
-		else if (/*!end_of_s &&*/i != m_regexpr.end() && !is_meta_char(*i)) {
-			tmp += *i;
-			sub_nfsm_2 = copy_nfsm(m_1_structure.at(*i).m_init, m_1_structure.at(*i).m_final);
-		}
-		else
-			break;
-		sub_nfsm_1 = connect_NFSM(sub_nfsm_1.m_init, sub_nfsm_1.m_final, sub_nfsm_2.m_init, sub_nfsm_2.m_final);
+		m_4_structure.insert(SymbolAndNFSMpairS(m_regexpr, sub_nfsm_1));
 	}
-	m_4_structure.insert(SymbolAndNFSMpairS(m_regexpr, sub_nfsm_1));
+	else { // regular expression is just one character
+		m_4_structure.insert(SymbolAndNFSMpairS(m_regexpr, copy_nfsm(m_1_structure.at(m_regexpr.front()).m_init,
+			m_1_structure.at(m_regexpr.front()).m_final)));
+	}
 	if (m_logging) m_logger << m_output_ws;
 }
 StateCouple Thompsons::transform() {

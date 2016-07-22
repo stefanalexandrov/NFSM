@@ -1,0 +1,40 @@
+Start logging>>>Thu Jul 21 22:20:50 2016
+
+Checking regular expression: 
+(a)  -> correct! 
+Starting Transformation... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 1 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 1 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 1 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 1 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Regular sub-expression being substituted: (a)
+ Modified regular expression: $6$
+ Done! Number of NFSMs: 1 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 1 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Regular sub-expression being substituted: (a)
+ Modified regular expression: $6$
+ Done! Number of NFSMs: 1 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+Out of range: invalid map<K, T> keyChecking regular expression: 
+(a)  -> correct! 
+Starting Transformation... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 1 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Regular sub-expression being substituted: (a)
+ Modified regular expression: $6$
+ Done! Number of NFSMs: 1 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>Concatenation... Done... 
+ Start optimization... 

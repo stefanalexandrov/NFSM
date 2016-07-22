@@ -67,6 +67,9 @@
     <None Include="res\NFSM3.rc2">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="resource.hm">
+      <Filter>Header Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="NFSM3.rc">

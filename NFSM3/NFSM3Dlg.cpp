@@ -232,7 +232,6 @@ void CNFSM3Dlg::OnCheck()
 	// TODO: Add your control notification handler code here
 	CWnd * wnd_reg_expr = GetDlgItem(IDC_EDIT1);
 	CWnd * wnd_output = GetDlgItem(IDC_EDIT3);
-	CWnd * wnd_progress = GetDlgItem(IDC_PROGCTRL1);
 	CWnd * wnd_transform = GetDlgItem(IDC_BUTTON1);
 	
 	
@@ -254,18 +253,12 @@ void CNFSM3Dlg::OnCheck()
 
 	if (output_size > 0) {
 		output_normal_ws = read_output_wnd(wnd_output);
-	}
-	//set up progress bar
-	wnd_progress->SendMessage(PBM_SETRANGE, 0, MAKELPARAM(0, reg_expr_size));
-	wnd_progress->SendMessage(PBM_SETSTEP, (WPARAM)1, 0);
-	
+	}	
 	
 	output_normal_ws.append(_T("Checking regular expression: \r\n"));
 	output_normal_ws.append(reg_expr_ws);
 	wnd_output->SetWindowTextW(output_normal_ws.c_str());
 
-
-	wnd_progress->SendMessage(PBM_STEPIT, 0, 0);
 	reg_expr_s = std::string(reg_expr_ws.begin(), reg_expr_ws.end());
 
 	if (check_reg_expr(reg_expr_s) == -1) {
@@ -281,8 +274,6 @@ void CNFSM3Dlg::OnCheck()
 	}
 
 	wnd_output->SetWindowTextW(output_normal_ws.c_str());
-	//wnd_output->SetWindowTextW(_T("\r\n"));
-	wnd_progress->SendMessage(PBM_SETPOS, reg_expr_size, 0);
 }
 
 int check_reg_expr(std::string s) {
@@ -328,11 +319,9 @@ int check_reg_expr(std::string s) {
 
 void CNFSM3Dlg::OnChangeRegExpr() {
 	CWnd * wnd_output = GetDlgItem(IDC_EDIT3);
-	CWnd * wnd_progress = GetDlgItem(IDC_PROGCTRL1);
 	CWnd * wnd_transform = GetDlgItem(IDC_BUTTON1);
 	wnd_output->SetWindowTextW(_T(""));
 	output_normal_ws = _T("");
-	wnd_progress->SendMessage(PBM_SETPOS, 0, 0);
 	wnd_transform->EnableWindow(FALSE);
 	CWnd * wnd_run = GetDlgItem(IDC_BUTTON4);
 	wnd_run->EnableWindow(FALSE);
@@ -350,7 +339,6 @@ void CNFSM3Dlg::OnChangeRegExpr() {
 void CNFSM3Dlg::OnTransform() {
 	CWnd * wnd_reg_expr = GetDlgItem(IDC_EDIT1);
 	CWnd * wnd_output = GetDlgItem(IDC_EDIT3);
-	CWnd * wnd_progress = GetDlgItem(IDC_PROGCTRL1);
 	CWnd * wnd_transform = GetDlgItem(IDC_BUTTON1);
 	CButton * chb_opt = (CButton *)GetDlgItem(IDC_CHECK2);
 	CButton * chb_logging = (CButton *)GetDlgItem(IDC_CHECK3);
