@@ -3618,3 +3618,46 @@ Done! Number of NFSMs: 12
 Done! Number of NFSMs: 12 
 >Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
 >Concatenation... Start optimization...
+Start logging>>>Mon Sep  5 12:07:23 2016
+
+Checking regular expression: 
+dfg  -> correct! 
+Starting Transformation... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 3 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 3 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 3 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 3 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 3 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 3 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>Concatenation... Checking regular expression: 
+dfg  -> correct! 
+Starting Transformation... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 3 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>Concatenation... Done... 
+ Start optimization... 
+States removed: 0. Done.
+Stop logging Mon Sep  5 12:10:42 2016
+

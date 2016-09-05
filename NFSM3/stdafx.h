@@ -67,3 +67,12 @@
 #endif
 
 
+const int MAX_NUMBER_OF_STATES = 100000;
+const int MAX_NUMBER_OF_NFSM_COPIES = 1000;
+const char LAMBDA_CH = '§'; //character to represent a lambda-transition
+const char BETA_CH = '#'; //character to represent a beta-transition
+						  //(like lambda-transition, but consumes one symbol) for "." metachar
+const char BRACKET_DELIM = '$';
+const char OR_DELIM = '%';
+#include <vector>
+static std::vector<char> METACHAR_ = { '(',')','*','+','?', '|' }; // '.' is not treated as metachar for simplisity

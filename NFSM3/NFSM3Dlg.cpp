@@ -8,6 +8,8 @@
 #include "DlgProxy.h"
 #include "afxdialogex.h"
 #include "nfsm.h"
+#include "Helpers.h"
+#include "Thompsons.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

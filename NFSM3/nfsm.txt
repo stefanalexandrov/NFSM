@@ -1,9 +1,9 @@
 strict digraph {
 	rankdir = LR
-	6 -> 7 [label="k"]
+	6 -> 7 [label="d"]
 	7 -> 8 [label="§"]
-	8 -> 9 [label="l"]
+	8 -> 9 [label="f"]
 	9 -> 10 [label="§"]
-	10 -> 11. [label="#"]
+	10 -> 11. [label="g"]
 
 }
