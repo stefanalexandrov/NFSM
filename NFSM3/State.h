@@ -4,6 +4,7 @@
 #include <map>
 #include "Transition.h"
 
+
 class State {
 public:
 	State(int id, bool initial = false, bool finals = false);

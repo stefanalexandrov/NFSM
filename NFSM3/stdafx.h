@@ -76,3 +76,4 @@ const char BRACKET_DELIM = '$';
 const char OR_DELIM = '%';
 #include <vector>
 static std::vector<char> METACHAR_ = { '(',')','*','+','?', '|' }; // '.' is not treated as metachar for simplisity
+

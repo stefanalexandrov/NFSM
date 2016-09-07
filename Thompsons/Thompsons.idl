@@ -1,0 +1,42 @@
+// Thompsons.idl : IDL source for Thompsons
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (Thompsons.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	object,
+	uuid(5A59C3B0-56FF-4ACA-B082-8FAD71376878),
+	dual,
+	nonextensible,
+	pointer_default(unique)
+]
+interface IThompsonsAlg : IDispatch{
+	[id(1)] HRESULT SetRegExpr([in] BSTR RegExprStr);
+	[id(2)] HRESULT Transform([out] UINT* InitState, [out] UINT* FinalState);
+	[id(3)] HRESULT GetStates([out] UINT* States);
+	[id(4)] HRESULT GetNumberOfStates([out] UINT* NStates);
+
+	[id(5)] HRESULT GetLog([out] BSTR* Log);
+	[id(6)] HRESULT GetLog2(UINT* Log);
+	[id(7)] HRESULT GetStatesArray([out] UINT* StartOfArray, [out] UINT* SizeOgArray);
+};
+[
+	uuid(7770EE68-E5A4-4B8B-8665-A086ADA3B180),
+	version(1.0),
+]
+library ThompsonsLib
+{
+	importlib("stdole2.tlb");
+	[
+		uuid(6F7C0D0B-F6C1-48DD-B6C0-AB408846F52E)		
+	]
+	coclass ThompsonsAlg
+	{
+		[default] interface IThompsonsAlg;
+	};
+};
+

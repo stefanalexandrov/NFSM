@@ -39,9 +39,6 @@
     <ClInclude Include="nfsm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Thompsons.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="TransformAlgorithm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -63,6 +60,12 @@
     <ClInclude Include="Exceptions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ThompsonsAlgImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Thompsons\Thompsons_i.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NFSM3.cpp">
@@ -80,20 +83,24 @@
     <ClCompile Include="nfsm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Thompsons.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Helpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SimpleLogger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Midl Include="NFSM3.idl">
+    <ClCompile Include="State.cpp">
       <Filter>Source Files</Filter>
-    </Midl>
+    </ClCompile>
+    <ClCompile Include="ThompsonsAlgImpl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Transition.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Thompsons\Thompsons_i.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="NFSM3.reg" />

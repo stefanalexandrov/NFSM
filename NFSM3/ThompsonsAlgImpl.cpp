@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Thompsons.h"
+#include "ThompsonsAlgImpl.h"
 #include "SimpleLogger.h"
 #include "Helpers.h"
 

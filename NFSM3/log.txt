@@ -3661,3 +3661,189 @@ Done! Number of NFSMs: 0
 States removed: 0. Done.
 Stop logging Mon Sep  5 12:10:42 2016
 
+Start logging>>>Wed Sep  7 12:03:21 2016
+
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>Concatenation... Start logging>>>Wed Sep  7 12:03:35 2016
+
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>Concatenation... Start logging>>>Wed Sep  7 12:05:45 2016
+
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>Concatenation... Start logging>>>Wed Sep  7 12:06:00 2016
+
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>Concatenation... Start logging>>>Wed Sep  7 12:08:57 2016
+
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>Concatenation... Stop logging Wed Sep  7 12:10:57 2016
+
+Start logging>>>Wed Sep  7 12:12:10 2016
+
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>Concatenation... Start logging>>>Wed Sep  7 12:14:05 2016
+
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>First iteration: building NFSMs for single characters...Done! Number of NFSMs: 2 
+>Second iteration: building NFSMs a single character followed by *, +, ? ... Done! Number of NFSMs: 0 
+>Third iteration: building NFSMs: <symbol>{metacharacter}|<symbol>{metacheracter} ... 
+Done! Number of NFSMs: 0 
+>Fourth iteration: building NFSMs for brackets... Done! Number of NFSMs: 0 
+>Fifth iteration: building NFSMs: (...){metacharacter}|(...){metacheracter} ... 
+>Concatenation... Stop logging Wed Sep  7 12:14:35 2016
+

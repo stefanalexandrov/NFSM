@@ -71,7 +71,7 @@ public:
 	NFSM(NFSM&&); //move constructor
 	NFSM& operator=(NFSM&&); //move assignment
 	friend TransformAlgorithm;
-	int construct(TransformAlgorithm&);
+	int construct();
 	int save(NFSMSaver& saver);
 	inline void set_out_wnd(CWnd* wn) { m_output = wn;}
 	inline void set_invalid() {	m_valid = false;}
@@ -81,10 +81,12 @@ public:
 	inline State* get_current() { return m_current; }
 	inline void set_current(State* st) { m_current = st; }
 	inline void set_logging(bool b) { m_logging = b; }
+	inline void set_reg_expr(std::string str) { m_regexpr = str; }
 	void optimize(Optimizer&);
 private:
 	std::shared_ptr<State> m_states; // array of all states
 	State * m_current;
+	std::string m_regexpr;
 	bool m_constructed;
 	bool m_valid;
 	CWnd * m_output;

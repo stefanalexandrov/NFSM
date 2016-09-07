@@ -9,7 +9,7 @@
 #include "afxdialogex.h"
 #include "nfsm.h"
 #include "Helpers.h"
-#include "Thompsons.h"
+#include "ThompsonsAlgImpl.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -346,12 +346,11 @@ void CNFSM3Dlg::OnTransform() {
 	CButton * chb_logging = (CButton *)GetDlgItem(IDC_CHECK3);
 
 	m_nfsm.set_out_wnd(wnd_output);
-	Thompsons algorithm(reg_expr_s);
+	m_nfsm.set_reg_expr(reg_expr_s);
 	if (chb_logging->GetCheck() == BST_CHECKED) {
 		m_nfsm.set_logging(true);
-		algorithm.set_logging(true);
 	}
-	m_nfsm.construct(algorithm);
+	m_nfsm.construct();
 	if (chb_opt->GetCheck() == BST_CHECKED) {
 		SuperflousStatesRemover optimizer;
 		if (chb_logging->GetCheck() == BST_CHECKED)

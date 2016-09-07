@@ -4,38 +4,13 @@
 #include "NFSM3Dlg.h"
 #include "DlgProxy.h"
 #include "afxdialogex.h"
-#include "Thompsons.h"
+#include "ThompsonsAlgImpl.h"
 #include "State.h"
 #include "Transition.h"
 #include "Helpers.h"
 #include "SimpleLogger.h"
-
-
-Transition::Transition() {}
-Transition::Transition(int id, char symbol, State * from, State * in) {
-	m_id = id;
-	m_from = from;
-	m_in = in;
-	m_symbol = symbol;
-}
-
-State::State() {
-	m_id = 0;
-	m_init_state = false;
-	m_final_state = false;
-	m_empty = true;
-}
-
-State::State(int id, bool initial, bool finals) {
-	m_id = id;
-	m_init_state = initial;
-	m_final_state = finals;
-	m_empty = false;
-}
-void State::set_transition(int id, char symbol, State * in) {
-	m_out.push_back(Transition(id, symbol, this, in));
-	in->m_in.push_back(Transition(id, symbol, this, in));
-}
+#include "..\Thompsons\Thompsons_i.c"
+#include "..\Thompsons\Thompsons_i.h"
 
 
 RUN::RUN(NFSM* machine, CWnd* output_wnd) {
@@ -89,15 +64,65 @@ NFSM& NFSM::operator=(NFSM&& nfsm) {
 }
 
 
-int NFSM::construct(TransformAlgorithm& algorithm) {
+int NFSM::construct() {
+	//adding Dll code for transformation
+	HRESULT hr;
+	IThompsonsAlg* ITalg = nullptr;
+
 	std::wstring output_ws = read_output_wnd(m_output);
 	output_ws.append(_T("Starting Transformation... \r\n"));
+	output_ws.append(_T("Initializing transformation algorithm... "));
+	//intilize COM
+	hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+
+	if (SUCCEEDED(hr))
+	{
+		hr = CoCreateInstance(CLSID_ThompsonsAlg, NULL,
+			CLSCTX_INPROC_SERVER,
+			IID_IThompsonsAlg, (void**)&ITalg);
+
+		if (SUCCEEDED(hr))
+		{
+			output_ws.append(_T("Success! \r\n"));
+			UINT InitState;
+			UINT FinalState;
+			UINT NStates;
+			UINT States;
+			UINT StatesArr;
+			UINT SatesArrSize;
+			_bstr_t log(L"");
+			ITalg->SetRegExpr(_bstr_t(m_regexpr.c_str()).GetBSTR());
+			ITalg->Transform(&InitState, &FinalState);
+			//Get Copy of the States array
+			ITalg->GetStatesArray(&StatesArr, &SatesArrSize);
+			ITalg->GetNumberOfStates(&NStates);
+			m_s_id = NStates - 1;
+			/*
+			std::unique_ptr<State, std::default_delete<State[]>> states { new State[SatesArrSize] };
+			for (int i = 0; i < SatesArrSize; i++)
+				states.get()[i] = ((State*)StatesArr)[i];
+			
+			m_states = std::move(states);
+			m_nfsm = StateCouple(find_initial_state(m_states.get(), SatesArrSize), find_final_state(m_states.get(), SatesArrSize));
+			*/
+			m_states = copy_nfsm((State*)InitState, (State*)FinalState, SatesArrSize, NStates);
+			m_nfsm = StateCouple(find_initial_state(m_states.get(), NStates), find_final_state(m_states.get(), NStates));
+			m_current = m_nfsm.m_init;
+			
+			ITalg->GetLog2((UINT*)log.GetAddress());
+			std::wstring wstmp(log.GetBSTR(), SysStringLen(log.GetBSTR()));
+			output_ws.append(wstmp);
+
+			ITalg->Release();
+		} else
+			output_ws.append(_T("Failure! \r\n"));
+
+	}
+	// Uninitialize COM
+	CoUninitialize();
+	//
+
 	if (m_logging) m_logger << output_ws;
-	m_nfsm = algorithm.transform();
-	m_current = m_nfsm.m_init;
-	m_states = algorithm.get_states();
-	m_s_id = algorithm.get_number_of_states();
-	output_ws.append(algorithm.get_log());
 	output_ws.append(_T("Done... \r\n "));
 	if (m_logging) m_logger << output_ws;
 	m_output->SetWindowTextW(output_ws.c_str());
@@ -306,15 +331,6 @@ TransType run_lambda(RUN * obj, std::vector<NFSM> * p_nfsms,
 		}
 	return TransType::NOT_FINAL_LAMBDA;
 }
-
-bool is_meta_char(char ch) {
-	for (std::vector<char>::iterator j = METACHAR_.begin(); j != METACHAR_.end(); ++j)
-		if (ch == *j)
-			return true;
-	return false;
-}
-
-
 void NFSM::optimize(Optimizer& opt) {
 	opt.optimize(m_nfsm.m_init, m_states, m_s_id);
 }

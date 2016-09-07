@@ -203,6 +203,9 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Thompsons\Thompsons_i.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="DlgProxy.h" />
     <ClInclude Include="Exceptions.h" />
     <ClInclude Include="Helpers.h" />
@@ -215,27 +218,30 @@
     <ClInclude Include="State.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="Thompsons.h" />
+    <ClInclude Include="ThompsonsAlgImpl.h" />
     <ClInclude Include="TransformAlgorithm.h" />
     <ClInclude Include="Transition.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Thompsons\Thompsons_i.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="DlgProxy.cpp" />
     <ClCompile Include="Helpers.cpp" />
     <ClCompile Include="nfsm.cpp" />
     <ClCompile Include="NFSM3.cpp" />
     <ClCompile Include="NFSM3Dlg.cpp" />
     <ClCompile Include="SimpleLogger.cpp" />
+    <ClCompile Include="State.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Thompsons.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Midl Include="NFSM3.idl" />
+    <ClCompile Include="ThompsonsAlgImpl.cpp" />
+    <ClCompile Include="Transition.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="NFSM3.reg" />
